@@ -15,6 +15,9 @@ export enum PostCategory {
   ANNOUNCEMENTS = 'announcements'
 }
 
+// Allow string literals as PostCategory for compatibility
+export type PostCategoryType = PostCategory | 'jira' | 'jsm' | 'confluence' | 'rovo' | 'announcements'
+
 // Base post interface
 export interface PostBase {
   title: string
