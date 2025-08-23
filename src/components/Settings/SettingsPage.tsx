@@ -16,6 +16,7 @@ import {
 } from 'lucide-react'
 import LoadingSpinner from '@/components/Common/LoadingSpinner'
 import { ErrorMessage } from '@/components/Common/ErrorBoundary'
+import api from '@/services/api'
 
 interface SettingsConfig {
   openai_api_key: string
@@ -65,21 +66,9 @@ export default function SettingsPage() {
     setError(null)
 
     try {
-      // Try to load settings from backend
-      const response = await fetch('/api/settings', {
-        method: 'GET',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-      })
-
-      if (response.ok) {
-        const settings = await response.json()
-        setConfig(settings)
-      } else {
-        // If no settings endpoint exists yet, use defaults
-        console.log('Settings endpoint not available, using defaults')
-      }
+      // Try to load settings from backend using API client
+      const settings = await api.get('/api/settings')
+      setConfig(settings)
     } catch (err: any) {
       // If backend isn't ready, use defaults
       console.log('Using default settings')
@@ -94,23 +83,11 @@ export default function SettingsPage() {
     setSuccessMessage(null)
 
     try {
-      const response = await fetch('/api/settings', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify(config)
-      })
-
-      if (response.ok) {
-        setSuccessMessage('Settings saved successfully!')
-        setTimeout(() => setSuccessMessage(null), 3000)
-      } else {
-        const errorData = await response.json()
-        throw new Error(errorData.detail || 'Failed to save settings')
-      }
+      await api.post('/api/settings', config)
+      setSuccessMessage('Settings saved successfully!')
+      setTimeout(() => setSuccessMessage(null), 3000)
     } catch (err: any) {
-      setError(err.message || 'Failed to save settings')
+      setError(err.detail || err.message || 'Failed to save settings')
     } finally {
       setIsSaving(false)
     }
@@ -128,43 +105,25 @@ export default function SettingsPage() {
     setIsTesting(true)
     
     try {
-      const response = await fetch('/api/settings/test-openai', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({ 
-          api_key: config.openai_api_key,
-          test_text: "This is a test message for sentiment analysis." 
-        })
+      const result = await api.post('/api/settings/test-openai', { 
+        api_key: config.openai_api_key,
+        test_text: "This is a test message for sentiment analysis." 
       })
-
-      const result = await response.json()
       
-      if (response.ok) {
-        setTestResults(prev => ({
-          ...prev,
-          openai: { 
-            success: true, 
-            message: 'OpenAI API connection successful!',
-            details: result
-          }
-        }))
-      } else {
-        setTestResults(prev => ({
-          ...prev,
-          openai: { 
-            success: false, 
-            message: result.detail || 'OpenAI API test failed'
-          }
-        }))
-      }
+      setTestResults(prev => ({
+        ...prev,
+        openai: { 
+          success: true, 
+          message: 'OpenAI API connection successful!',
+          details: result
+        }
+      }))
     } catch (err: any) {
       setTestResults(prev => ({
         ...prev,
         openai: { 
           success: false, 
-          message: 'Failed to test OpenAI API: ' + err.message 
+          message: err.detail || err.message || 'OpenAI API test failed'
         }
       }))
     } finally {
@@ -176,39 +135,22 @@ export default function SettingsPage() {
     setIsTesting(true)
     
     try {
-      const response = await fetch('/api/scraping/test-single-forum/jira', {
-        method: 'GET',
-        headers: {
-          'Content-Type': 'application/json',
-        }
-      })
-
-      const result = await response.json()
+      const result = await api.get('/api/scraping/test-single-forum/jira')
       
-      if (response.ok) {
-        setTestResults(prev => ({
-          ...prev,
-          scraping: { 
-            success: true, 
-            message: `Successfully scraped ${result.posts_scraped} posts from Jira forum`,
-            details: result
-          }
-        }))
-      } else {
-        setTestResults(prev => ({
-          ...prev,
-          scraping: { 
-            success: false, 
-            message: result.detail || 'Scraping test failed'
-          }
-        }))
-      }
+      setTestResults(prev => ({
+        ...prev,
+        scraping: { 
+          success: true, 
+          message: `Successfully scraped ${result.posts_scraped} posts from Jira forum`,
+          details: result
+        }
+      }))
     } catch (err: any) {
       setTestResults(prev => ({
         ...prev,
         scraping: { 
           success: false, 
-          message: 'Failed to test scraping: ' + err.message 
+          message: err.detail || err.message || 'Scraping test failed'
         }
       }))
     } finally {
