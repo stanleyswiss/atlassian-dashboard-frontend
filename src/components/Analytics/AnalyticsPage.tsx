@@ -1,13 +1,15 @@
 
 import ActivityChart from '../Dashboard/ActivityChart'
 import { StatCard } from '../Dashboard/StatsCards'
+import ContentIntelligence from './ContentIntelligence'
 import { useState, useEffect } from 'react'
-import { TrendingUp, BarChart3, PieChart, Users } from 'lucide-react'
+import { TrendingUp, BarChart3, PieChart, Users, Brain, Activity } from 'lucide-react'
 import { analyticsService } from '@/services'
 
 export default function AnalyticsPage() {
   const [summaryStats, setSummaryStats] = useState<any>(null)
   const [isLoading, setIsLoading] = useState(true)
+  const [activeTab, setActiveTab] = useState<'overview' | 'intelligence'>('overview')
 
   useEffect(() => {
     loadAnalytics()
@@ -33,13 +35,49 @@ export default function AnalyticsPage() {
         <div>
           <h1 className="text-2xl font-bold text-gray-900">Analytics & Insights</h1>
           <p className="text-gray-600 mt-1">
-            Deep dive into community trends, sentiment analysis, and engagement metrics
+            Deep dive into community trends, sentiment analysis, and AI-powered insights
           </p>
         </div>
       </div>
 
-      {/* Summary Stats */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
+      {/* Tabs */}
+      <div className="border-b border-gray-200">
+        <nav className="-mb-px flex space-x-8">
+          <button
+            onClick={() => setActiveTab('overview')}
+            className={`py-2 px-1 border-b-2 font-medium text-sm transition-colors ${
+              activeTab === 'overview'
+                ? 'border-blue-500 text-blue-600'
+                : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
+            }`}
+          >
+            <div className="flex items-center space-x-2">
+              <Activity className="w-4 h-4" />
+              <span>Analytics Overview</span>
+            </div>
+          </button>
+          
+          <button
+            onClick={() => setActiveTab('intelligence')}
+            className={`py-2 px-1 border-b-2 font-medium text-sm transition-colors ${
+              activeTab === 'intelligence'
+                ? 'border-purple-500 text-purple-600'
+                : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
+            }`}
+          >
+            <div className="flex items-center space-x-2">
+              <Brain className="w-4 h-4" />
+              <span>Content Intelligence</span>
+            </div>
+          </button>
+        </nav>
+      </div>
+
+      {/* Tab Content */}
+      {activeTab === 'overview' ? (
+        <>
+          {/* Summary Stats */}
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
         <StatCard
           title="Weekly Posts"
           value={summaryStats?.total_posts || 64}
@@ -180,27 +218,31 @@ export default function AnalyticsPage() {
         </div>
       </div>
 
-      {/* Time-based Analytics */}
-      <div className="dashboard-card">
-        <h3 className="text-lg font-semibold text-gray-900 mb-4">Activity Patterns</h3>
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-          <div className="text-center">
-            <p className="text-2xl font-bold text-blue-600">Peak Hours</p>
-            <p className="text-sm text-gray-600">10 AM - 2 PM UTC</p>
-            <p className="text-xs text-gray-500 mt-1">Most active posting time</p>
+          {/* Time-based Analytics */}
+          <div className="dashboard-card">
+            <h3 className="text-lg font-semibold text-gray-900 mb-4">Activity Patterns</h3>
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+              <div className="text-center">
+                <p className="text-2xl font-bold text-blue-600">Peak Hours</p>
+                <p className="text-sm text-gray-600">10 AM - 2 PM UTC</p>
+                <p className="text-xs text-gray-500 mt-1">Most active posting time</p>
+              </div>
+              <div className="text-center">
+                <p className="text-2xl font-bold text-green-600">Best Day</p>
+                <p className="text-sm text-gray-600">Tuesday</p>
+                <p className="text-xs text-gray-500 mt-1">Highest engagement day</p>
+              </div>
+              <div className="text-center">
+                <p className="text-2xl font-bold text-purple-600">Response Time</p>
+                <p className="text-sm text-gray-600">2.3 hours</p>
+                <p className="text-xs text-gray-500 mt-1">Average response time</p>
+              </div>
+            </div>
           </div>
-          <div className="text-center">
-            <p className="text-2xl font-bold text-green-600">Best Day</p>
-            <p className="text-sm text-gray-600">Tuesday</p>
-            <p className="text-xs text-gray-500 mt-1">Highest engagement day</p>
-          </div>
-          <div className="text-center">
-            <p className="text-2xl font-bold text-purple-600">Response Time</p>
-            <p className="text-sm text-gray-600">2.3 hours</p>
-            <p className="text-xs text-gray-500 mt-1">Average response time</p>
-          </div>
-        </div>
-      </div>
+        </>
+      ) : (
+        <ContentIntelligence />
+      )}
     </div>
   )
 }
