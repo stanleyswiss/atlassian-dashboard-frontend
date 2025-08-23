@@ -162,21 +162,14 @@ export default function SettingsPage() {
     setIsTesting(true)
     
     try {
-      const response = await fetch('/api/dashboard/test', {
-        method: 'GET',
-        headers: {
-          'Content-Type': 'application/json',
-        }
-      })
-
-      const result = await response.json()
+      const result = await api.get('/api/settings/status')
       
-      if (response.ok && result.status === 'success') {
+      if (result.database && result.database.status === 'connected') {
         setTestResults(prev => ({
           ...prev,
           database: { 
             success: true, 
-            message: `Database connected. ${result.posts_count} posts available.`,
+            message: result.database.message,
             details: result
           }
         }))
@@ -185,7 +178,7 @@ export default function SettingsPage() {
           ...prev,
           database: { 
             success: false, 
-            message: result.error || 'Database test failed'
+            message: result.database?.message || 'Database test failed'
           }
         }))
       }
@@ -194,7 +187,7 @@ export default function SettingsPage() {
         ...prev,
         database: { 
           success: false, 
-          message: 'Failed to test database: ' + err.message 
+          message: err.detail || err.message || 'Failed to test database'
         }
       }))
     } finally {
