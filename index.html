@@ -1,0 +1,106 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="description" content="Atlassian Community Dashboard - Monitor community activity, sentiment analysis, and trending topics" />
+    <meta name="keywords" content="Atlassian, community, dashboard, sentiment analysis, analytics" />
+    <meta name="author" content="Atlassian Community Dashboard" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    
+    <!-- Favicon -->
+    <link rel="icon" type="image/svg+xml" href="/vite.svg" />
+    
+    <!-- Preconnect to external domains -->
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    
+    <!-- SEO Meta Tags -->
+    <meta property="og:title" content="Atlassian Community Dashboard" />
+    <meta property="og:description" content="Monitor Atlassian Community activity with real-time analytics, sentiment analysis, and trending topics" />
+    <meta property="og:type" content="website" />
+    <meta property="og:url" content="http://localhost:3000" />
+    
+    <!-- Twitter Card -->
+    <meta name="twitter:card" content="summary_large_image" />
+    <meta name="twitter:title" content="Atlassian Community Dashboard" />
+    <meta name="twitter:description" content="Monitor Atlassian Community activity with real-time analytics, sentiment analysis, and trending topics" />
+    
+    <!-- Theme Color -->
+    <meta name="theme-color" content="#0052cc" />
+    
+    <title>Atlassian Community Dashboard</title>
+    
+    <!-- Inline critical CSS for faster loading -->
+    <style>
+      /* Loading spinner styles */
+      .loading-container {
+        position: fixed;
+        top: 0;
+        left: 0;
+        right: 0;
+        bottom: 0;
+        background: #f8fafc;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        z-index: 9999;
+      }
+      
+      .loading-spinner {
+        width: 40px;
+        height: 40px;
+        border: 3px solid #e2e8f0;
+        border-top: 3px solid #0052cc;
+        border-radius: 50%;
+        animation: spin 1s linear infinite;
+      }
+      
+      @keyframes spin {
+        0% { transform: rotate(0deg); }
+        100% { transform: rotate(360deg); }
+      }
+      
+      .loading-text {
+        margin-top: 16px;
+        color: #64748b;
+        font-family: Inter, system-ui, sans-serif;
+      }
+    </style>
+  </head>
+  <body>
+    <!-- Loading screen shown while React loads -->
+    <div id="loading" class="loading-container">
+      <div style="text-align: center;">
+        <div class="loading-spinner"></div>
+        <div class="loading-text">Loading Dashboard...</div>
+      </div>
+    </div>
+    
+    <!-- React app root -->
+    <div id="root"></div>
+    
+    <!-- Hide loading screen when React takes over -->
+    <script>
+      window.addEventListener('load', function() {
+        const loading = document.getElementById('loading');
+        if (loading) {
+          loading.style.display = 'none';
+        }
+      });
+    </script>
+    
+    <!-- Vite dev server script -->
+    <script type="module" src="/src/main.tsx"></script>
+    
+    <!-- Service Worker for PWA (optional, can be added later) -->
+    <!--
+    <script>
+      if ('serviceWorker' in navigator) {
+        window.addEventListener('load', function() {
+          navigator.serviceWorker.register('/sw.js');
+        });
+      }
+    </script>
+    -->
+  </body>
+</html>
