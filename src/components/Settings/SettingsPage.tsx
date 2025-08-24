@@ -242,13 +242,16 @@ export default function SettingsPage() {
     setIsTesting(true)
     
     try {
-      const result = await api.post('/api/scraping/trigger-all')
+      // Use a longer timeout for scraping operation (2 minutes)
+      const result = await api.post('/api/scraping/trigger-all', {}, { 
+        timeout: 120000 // 2 minutes
+      })
       
       console.log('Scraping trigger result:', result) // Debug log
       
-      if (result.data && result.data.success) {
-        const message = result.data.message || 'Scraping triggered successfully'
-        const postsScraped = result.data.posts_scraped || 'Unknown'
+      if (result && result.success) {
+        const message = result.message || 'Scraping triggered successfully'
+        const postsScraped = result.posts_scraped || 'Unknown'
         setSuccessMessage(`${message} - Posts scraped: ${postsScraped}`)
         setTimeout(() => setSuccessMessage(null), 8000)
       } else {
@@ -258,8 +261,8 @@ export default function SettingsPage() {
       console.error('Scraping trigger error:', err)
       
       let errorMessage = 'Scraping trigger failed'
-      if (err.response?.data?.detail) {
-        errorMessage += ': ' + err.response.data.detail
+      if (err.detail) {
+        errorMessage += ': ' + err.detail
       } else if (err.message) {
         errorMessage += ': ' + err.message
       }
