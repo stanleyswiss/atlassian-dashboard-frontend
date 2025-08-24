@@ -70,6 +70,7 @@ export default function SettingsPage() {
   const [isLoadingStatus, setIsLoadingStatus] = useState(false)
   const [isAnalyzing, setIsAnalyzing] = useState(false)
   const [isCollecting, setIsCollecting] = useState(false)
+  const [analysisBatchRunning, setAnalysisBatchRunning] = useState(false)
 
   useEffect(() => {
     loadSettings()
@@ -416,30 +417,61 @@ export default function SettingsPage() {
     setIsAnalyzing(true)
     
     try {
-      const result = await api.post('/api/admin/analyze-all-posts', {}, {
-        timeout: 300000 // 5 minutes timeout for analysis
-      })
+      let totalAnalyzed = 0
+      let batchCount = 0
+      let shouldContinue = true
       
-      console.log('Analyze all posts result:', result)
-      
-      if (result && result.success) {
-        const analyzed = result.posts_analyzed || 0
-        const total = result.total_posts || 0
-        const message = result.message || 'Analysis completed'
+      // Process in batches to avoid timeouts
+      while (shouldContinue && batchCount < 20) { // Safety limit of 20 batches
+        batchCount++
         
-        setSuccessMessage(`${message}. Analyzed ${analyzed}/${total} posts. Your BI Dashboard should now show insights!`)
-        setTimeout(() => setSuccessMessage(null), 15000)
+        const result = await api.post('/api/admin/analyze-all-posts', 
+          { batch_size: 5 }, // Small batch size
+          { timeout: 60000 } // 1 minute timeout per batch
+        )
         
-        // Refresh status after a delay
-        setTimeout(() => checkAIStatus(), 3000)
-      } else {
-        setError(result?.message || 'Failed to analyze posts')
+        console.log(`Batch ${batchCount} result:`, result)
+        
+        if (result && result.success) {
+          const analyzed = result.posts_analyzed || 0
+          const remaining = result.remaining_posts || 0
+          const progress = result.progress_percent || 0
+          
+          totalAnalyzed += analyzed
+          shouldContinue = result.continue_analysis && remaining > 0
+          
+          // Update progress message
+          if (shouldContinue) {
+            setSuccessMessage(`Analyzing posts... Batch ${batchCount}: ${analyzed} posts analyzed. ${remaining} remaining. Progress: ${progress}%`)
+          } else {
+            setSuccessMessage(`AI Analysis completed! Total analyzed: ${totalAnalyzed} posts. Progress: 100%. Your dashboard should now show insights!`)
+            setTimeout(() => setSuccessMessage(null), 15000)
+            
+            // Refresh status after completion
+            setTimeout(() => checkAIStatus(), 3000)
+            break
+          }
+        } else {
+          setError(result?.message || `Failed to analyze posts in batch ${batchCount}`)
+          break
+        }
+        
+        // Small delay between batches to avoid overwhelming the API
+        await new Promise(resolve => setTimeout(resolve, 1000))
       }
+      
+      if (batchCount >= 20) {
+        setSuccessMessage(`AI Analysis partially completed. Analyzed ${totalAnalyzed} posts in ${batchCount} batches. You may need to run this again to finish remaining posts.`)
+        setTimeout(() => setSuccessMessage(null), 20000)
+      }
+      
     } catch (err: any) {
       console.error('Analyze all posts error:', err)
       
       let errorMessage = 'Post analysis failed'
-      if (err.detail) {
+      if (err.response?.status === 0 || err.message?.includes('Network Error')) {
+        errorMessage = 'Network connection lost during analysis. Your progress may have been saved. Try running again.'
+      } else if (err.detail) {
         errorMessage += ': ' + err.detail
       } else if (err.message) {
         errorMessage += ': ' + err.message
@@ -448,6 +480,41 @@ export default function SettingsPage() {
       setError(errorMessage)
     } finally {
       setIsAnalyzing(false)
+    }
+  }
+
+  const continueAnalysis = async () => {
+    setAnalysisBatchRunning(true)
+    
+    try {
+      const result = await api.post('/api/admin/analyze-next-batch', 
+        { batch_size: 3 }, // Smaller batch for quick continuation
+        { timeout: 45000 } // 45 seconds timeout
+      )
+      
+      console.log('Continue analysis result:', result)
+      
+      if (result && result.success) {
+        const analyzed = result.posts_analyzed || 0
+        const remaining = result.remaining_posts || 0
+        const progress = result.progress_percent || 0
+        
+        if (remaining > 0) {
+          setSuccessMessage(`Analyzed ${analyzed} more posts. ${remaining} remaining (${progress}% complete). Click "Continue" again or run full analysis.`)
+        } else {
+          setSuccessMessage(`Analysis complete! Analyzed ${analyzed} final posts. All posts now have AI analysis!`)
+          setTimeout(() => checkAIStatus(), 2000)
+        }
+        
+        setTimeout(() => setSuccessMessage(null), 10000)
+      } else {
+        setError(result?.message || 'Failed to continue analysis')
+      }
+    } catch (err: any) {
+      console.error('Continue analysis error:', err)
+      setError('Failed to continue analysis: ' + (err.message || 'Unknown error'))
+    } finally {
+      setAnalysisBatchRunning(false)
     }
   }
 
@@ -974,7 +1041,7 @@ export default function SettingsPage() {
               
               <button
                 onClick={analyzeAllPosts}
-                disabled={isAnalyzing || scrapingStatus?.status === 'SCRAPING'}
+                disabled={isAnalyzing || analysisBatchRunning || scrapingStatus?.status === 'SCRAPING'}
                 className="flex items-center space-x-2 px-4 py-2 bg-green-600 text-white rounded-md hover:bg-green-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
               >
                 {isAnalyzing ? (
@@ -986,8 +1053,21 @@ export default function SettingsPage() {
               </button>
               
               <button
+                onClick={continueAnalysis}
+                disabled={isAnalyzing || analysisBatchRunning || scrapingStatus?.status === 'SCRAPING'}
+                className="flex items-center space-x-2 px-3 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors text-sm"
+              >
+                {analysisBatchRunning ? (
+                  <RefreshCw className="h-4 w-4 animate-spin" />
+                ) : (
+                  <Zap className="h-4 w-4" />
+                )}
+                <span>{analysisBatchRunning ? 'Processing...' : 'Continue Analysis'}</span>
+              </button>
+              
+              <button
                 onClick={handleFullDataCollection}
-                disabled={isCollecting || scrapingStatus?.status === 'SCRAPING'}
+                disabled={isCollecting || isAnalyzing || analysisBatchRunning || scrapingStatus?.status === 'SCRAPING'}
                 className="flex items-center space-x-2 px-4 py-2 bg-purple-600 text-white rounded-md hover:bg-purple-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
               >
                 {isCollecting ? (
