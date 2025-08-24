@@ -684,6 +684,48 @@ export default function SettingsPage() {
         </div>
       </div>
 
+      {/* Database Management */}
+      <div className="dashboard-card">
+        <div className="flex items-center justify-between mb-6">
+          <div className="flex items-center space-x-3">
+            <Database className="w-5 h-5 text-orange-600" />
+            <h3 className="text-lg font-semibold text-gray-900">Database Management</h3>
+          </div>
+        </div>
+        
+        <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-4 mb-4">
+          <div className="flex items-start space-x-3">
+            <AlertTriangle className="w-5 h-5 text-yellow-600 mt-0.5" />
+            <div>
+              <h4 className="font-medium text-yellow-900">Settings Persistence Fix</h4>
+              <p className="text-sm text-yellow-700 mt-1">
+                If your settings aren't being saved properly, click "Migrate Database" to create the settings table.
+                This is a one-time setup that ensures your configuration persists through server restarts.
+              </p>
+            </div>
+          </div>
+        </div>
+
+        <div className="flex items-center space-x-4">
+          <button
+            onClick={migrateDatabase}
+            disabled={isTesting}
+            className="flex items-center space-x-2 px-4 py-2 bg-orange-600 text-white rounded-md hover:bg-orange-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+          >
+            {isTesting ? (
+              <RefreshCw className="h-4 w-4 animate-spin" />
+            ) : (
+              <Database className="h-4 w-4" />
+            )}
+            <span>Migrate Database</span>
+          </button>
+          
+          <div className="text-sm text-gray-600">
+            Creates settings table and ensures proper data structure
+          </div>
+        </div>
+      </div>
+
       {/* Scraping Configuration */}
       <div className="dashboard-card">
         <div className="flex items-center space-x-3 mb-6">
