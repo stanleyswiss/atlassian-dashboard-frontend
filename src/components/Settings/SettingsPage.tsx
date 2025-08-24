@@ -15,7 +15,8 @@ import {
   Activity,
   Zap,
   Trash2,
-  TrendingUp
+  TrendingUp,
+  Cpu
 } from 'lucide-react'
 import LoadingSpinner from '@/components/Common/LoadingSpinner'
 import { ErrorMessage } from '@/components/Common/ErrorBoundary'
@@ -355,6 +356,45 @@ export default function SettingsPage() {
       console.error('AI analysis check error:', err)
       
       let errorMessage = 'AI analysis check failed'
+      if (err.detail) {
+        errorMessage += ': ' + err.detail
+      } else if (err.message) {
+        errorMessage += ': ' + err.message
+      }
+      
+      setError(errorMessage)
+    } finally {
+      setIsTesting(false)
+    }
+  }
+
+  const analyzeAllPosts = async () => {
+    setIsTesting(true)
+    
+    try {
+      const result = await api.post('/api/admin/analyze-all-posts', {}, {
+        timeout: 300000 // 5 minutes timeout for analysis
+      })
+      
+      console.log('Analyze all posts result:', result)
+      
+      if (result && result.success) {
+        const analyzed = result.posts_analyzed || 0
+        const total = result.total_posts || 0
+        const message = result.message || 'Analysis completed'
+        
+        setSuccessMessage(`${message}. Analyzed ${analyzed}/${total} posts. Your BI Dashboard should now show insights!`)
+        setTimeout(() => setSuccessMessage(null), 15000)
+        
+        // Refresh status after a delay
+        setTimeout(() => checkAIStatus(), 3000)
+      } else {
+        setError(result?.message || 'Failed to analyze posts')
+      }
+    } catch (err: any) {
+      console.error('Analyze all posts error:', err)
+      
+      let errorMessage = 'Post analysis failed'
       if (err.detail) {
         errorMessage += ': ' + err.detail
       } else if (err.message) {
@@ -874,21 +914,36 @@ export default function SettingsPage() {
           </div>
           
           <div className="flex items-center space-x-4">
-            <button
-              onClick={checkAIStatus}
-              disabled={isTesting}
-              className="flex items-center space-x-2 px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
-            >
-              {isTesting ? (
-                <RefreshCw className="h-4 w-4 animate-spin" />
-              ) : (
-                <Eye className="h-4 w-4" />
-              )}
-              <span>Check AI Analysis Status</span>
-            </button>
+            <div className="flex items-center space-x-4">
+              <button
+                onClick={checkAIStatus}
+                disabled={isTesting}
+                className="flex items-center space-x-2 px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+              >
+                {isTesting ? (
+                  <RefreshCw className="h-4 w-4 animate-spin" />
+                ) : (
+                  <Eye className="h-4 w-4" />
+                )}
+                <span>Check AI Analysis Status</span>
+              </button>
+              
+              <button
+                onClick={analyzeAllPosts}
+                disabled={isTesting}
+                className="flex items-center space-x-2 px-4 py-2 bg-green-600 text-white rounded-md hover:bg-green-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+              >
+                {isTesting ? (
+                  <RefreshCw className="h-4 w-4 animate-spin" />
+                ) : (
+                  <Cpu className="h-4 w-4" />
+                )}
+                <span>Analyze All Posts with AI</span>
+              </button>
+            </div>
             
             <div className="text-sm text-gray-600">
-              Verify if Vision AI is actually analyzing your posts
+              Check AI status and run analysis on all existing posts to fix 0% coverage
             </div>
           </div>
         </div>
