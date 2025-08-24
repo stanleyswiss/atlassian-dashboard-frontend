@@ -238,58 +238,26 @@ export default function SettingsPage() {
     }
   }
 
-  const testPostsQuery = async () => {
+  const triggerScraping = async () => {
     setIsTesting(true)
     
     try {
-      const result = await api.get('/api/admin/test-posts-query')
+      const result = await api.post('/api/scraping/trigger-all')
       
-      console.log('Posts query test result:', result) // Debug log
+      console.log('Scraping trigger result:', result) // Debug log
       
       if (result.data && result.data.success) {
-        setSuccessMessage(`Posts query successful! Total posts: ${result.data.total_posts}`)
-        setTimeout(() => setSuccessMessage(null), 3000)
+        const message = result.data.message || 'Scraping triggered successfully'
+        const postsScraped = result.data.posts_scraped || 'Unknown'
+        setSuccessMessage(`${message} - Posts scraped: ${postsScraped}`)
+        setTimeout(() => setSuccessMessage(null), 8000)
       } else {
-        const errorMsg = result.data?.error || 'Unknown error'
-        setError(`Posts query failed: ${errorMsg}`)
-        console.error('Posts query error details:', result.data)
+        setError('Scraping failed or returned no data')
       }
     } catch (err: any) {
-      console.error('Posts query test error:', err)
+      console.error('Scraping trigger error:', err)
       
-      let errorMessage = 'Posts query test failed'
-      if (err.response?.data?.detail) {
-        errorMessage += ': ' + err.response.data.detail
-      } else if (err.message) {
-        errorMessage += ': ' + err.message
-      }
-      
-      setError(errorMessage)
-    } finally {
-      setIsTesting(false)
-    }
-  }
-
-  const testCriticalIssuesAPI = async () => {
-    setIsTesting(true)
-    
-    try {
-      const result = await api.get('/api/business-intelligence/critical-issues?days=7')
-      
-      console.log('Critical Issues API test result:', result) // Debug log
-      
-      if (result.data) {
-        const dataType = Array.isArray(result.data) ? 'array' : typeof result.data
-        const dataLength = Array.isArray(result.data) ? result.data.length : 'N/A'
-        setSuccessMessage(`Critical Issues API working! Type: ${dataType}, Length: ${dataLength}`)
-        setTimeout(() => setSuccessMessage(null), 5000)
-      } else {
-        setError('Critical Issues API returned no data')
-      }
-    } catch (err: any) {
-      console.error('Critical Issues API test error:', err)
-      
-      let errorMessage = 'Critical Issues API test failed'
+      let errorMessage = 'Scraping trigger failed'
       if (err.response?.data?.detail) {
         errorMessage += ': ' + err.response.data.detail
       } else if (err.message) {
@@ -401,42 +369,16 @@ export default function SettingsPage() {
             <h3 className="text-lg font-semibold text-gray-900">System Tests</h3>
           </div>
           <button
-            onClick={migrateDatabase}
+            onClick={triggerScraping}
             disabled={isTesting}
-            className="flex items-center space-x-2 px-3 py-2 bg-orange-600 text-white text-sm rounded-md hover:bg-orange-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+            className="flex items-center space-x-2 px-3 py-2 bg-green-600 text-white text-sm rounded-md hover:bg-green-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
           >
             {isTesting ? (
               <RefreshCw className="h-4 w-4 animate-spin" />
             ) : (
-              <Database className="h-4 w-4" />
+              <RefreshCw className="h-4 w-4" />
             )}
-            <span>Migrate DB</span>
-          </button>
-          
-          <button
-            onClick={testPostsQuery}
-            disabled={isTesting}
-            className="flex items-center space-x-2 px-3 py-2 bg-blue-600 text-white text-sm rounded-md hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
-          >
-            {isTesting ? (
-              <RefreshCw className="h-4 w-4 animate-spin" />
-            ) : (
-              <Database className="h-4 w-4" />
-            )}
-            <span>Test Posts</span>
-          </button>
-          
-          <button
-            onClick={testCriticalIssuesAPI}
-            disabled={isTesting}
-            className="flex items-center space-x-2 px-3 py-2 bg-purple-600 text-white text-sm rounded-md hover:bg-purple-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
-          >
-            {isTesting ? (
-              <RefreshCw className="h-4 w-4 animate-spin" />
-            ) : (
-              <BarChart3 className="h-4 w-4" />
-            )}
-            <span>Test Critical Issues</span>
+            <span>Scrape on Demand</span>
           </button>
         </div>
         
