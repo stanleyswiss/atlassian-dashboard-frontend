@@ -289,6 +289,41 @@ export default function SettingsPage() {
     }
   }
 
+  const debugSettings = async () => {
+    setIsTesting(true)
+    
+    try {
+      const result = await api.get('/api/admin/debug-settings')
+      
+      console.log('Settings debug result:', result)
+      
+      if (result && result.success) {
+        console.log('Debug info:', result.debug_info)
+        const dbCount = result.debug_info?.settings_count_in_db || 0
+        const testWrite = result.debug_info?.test_write_success
+        const testRead = result.debug_info?.test_read_result
+        
+        setSuccessMessage(`Debug complete: ${dbCount} settings in DB, Write: ${testWrite ? 'OK' : 'FAILED'}, Read: ${testRead !== 'not_found' ? 'OK' : 'FAILED'}`)
+        setTimeout(() => setSuccessMessage(null), 10000)
+      } else {
+        setError(`Settings debug failed: ${result?.error || 'Unknown error'}`)
+      }
+    } catch (err: any) {
+      console.error('Settings debug error:', err)
+      
+      let errorMessage = 'Settings debug failed'
+      if (err.detail) {
+        errorMessage += ': ' + err.detail
+      } else if (err.message) {
+        errorMessage += ': ' + err.message
+      }
+      
+      setError(errorMessage)
+    } finally {
+      setIsTesting(false)
+    }
+  }
+
   const triggerScraping = async () => {
     setIsTesting(true)
     
@@ -773,6 +808,25 @@ export default function SettingsPage() {
             
             <div className="text-sm text-gray-600">
               Migrates all database structures (more comprehensive)
+            </div>
+          </div>
+          
+          <div className="flex items-center space-x-4">
+            <button
+              onClick={debugSettings}
+              disabled={isTesting}
+              className="flex items-center space-x-2 px-4 py-2 bg-purple-600 text-white rounded-md hover:bg-purple-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+            >
+              {isTesting ? (
+                <RefreshCw className="h-4 w-4 animate-spin" />
+              ) : (
+                <TestTube className="h-4 w-4" />
+              )}
+              <span>Debug Settings</span>
+            </button>
+            
+            <div className="text-sm text-gray-600">
+              Test settings read/write functionality (check console)
             </div>
           </div>
         </div>
