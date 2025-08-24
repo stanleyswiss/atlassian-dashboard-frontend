@@ -32,7 +32,11 @@ export default function TrendingSolutions() {
     
     try {
       const response = await api.get('/api/business-intelligence/trending-solutions')
-      setSolutions(response.data)
+      console.log('Trending Solutions API Response:', response) // Debug log
+      
+      // Ensure response.data is an array
+      const data = Array.isArray(response.data) ? response.data : []
+      setSolutions(data)
     } catch (err: any) {
       console.error('Failed to load trending solutions:', err)
       setError('Failed to load solutions')
@@ -116,7 +120,7 @@ export default function TrendingSolutions() {
     return null
   }
 
-  const filteredSolutions = solutions.filter(solution => {
+  const filteredSolutions = (solutions || []).filter(solution => {
     if (filter === 'visual') return solution.has_visual_guide
     if (filter === 'advanced') return solution.technical_level === 'advanced' || solution.technical_level === 'expert'
     return true

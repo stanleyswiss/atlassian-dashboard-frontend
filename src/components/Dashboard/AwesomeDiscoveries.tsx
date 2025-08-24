@@ -30,7 +30,11 @@ export default function AwesomeDiscoveries() {
     
     try {
       const response = await api.get('/api/business-intelligence/awesome-discoveries')
-      setDiscoveries(response.data)
+      console.log('Awesome Discoveries API Response:', response) // Debug log
+      
+      // Ensure response.data is an array
+      const data = Array.isArray(response.data) ? response.data : []
+      setDiscoveries(data)
     } catch (err: any) {
       console.error('Failed to load awesome discoveries:', err)
       setError('Failed to load discoveries')
@@ -105,7 +109,7 @@ export default function AwesomeDiscoveries() {
         <div className="flex items-center space-x-3">
           <Lightbulb className="w-5 h-5 text-yellow-600" />
           <h3 className="text-lg font-semibold text-gray-900">Awesome Discoveries</h3>
-          <span className="text-sm text-gray-500">({discoveries.length})</span>
+          <span className="text-sm text-gray-500">({discoveries?.length || 0})</span>
         </div>
         
         <button className="text-sm text-blue-600 hover:text-blue-700 font-medium">
@@ -119,7 +123,7 @@ export default function AwesomeDiscoveries() {
         </div>
       )}
 
-      {discoveries.length === 0 ? (
+      {!discoveries || discoveries.length === 0 ? (
         <div className="text-center py-8">
           <div className="inline-flex items-center justify-center w-12 h-12 bg-gray-100 rounded-full mb-3">
             <Lightbulb className="w-6 h-6 text-gray-400" />
@@ -129,7 +133,7 @@ export default function AwesomeDiscoveries() {
         </div>
       ) : (
         <div className="space-y-4">
-          {discoveries.map((discovery, index) => (
+          {discoveries?.map((discovery, index) => (
             <div
               key={index}
               className="border border-gray-200 rounded-lg p-4 hover:border-blue-300 hover:shadow-md transition-all duration-200"

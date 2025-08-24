@@ -32,7 +32,11 @@ export default function UnresolvedProblems() {
     
     try {
       const response = await api.get('/api/business-intelligence/unresolved-problems?days=14')
-      setProblems(response.data)
+      console.log('Unresolved Problems API Response:', response) // Debug log
+      
+      // Ensure response.data is an array
+      const data = Array.isArray(response.data) ? response.data : []
+      setProblems(data)
     } catch (err: any) {
       console.error('Failed to load unresolved problems:', err)
       setError('Failed to load problems')
@@ -119,7 +123,7 @@ export default function UnresolvedProblems() {
     }
   }
 
-  const sortedProblems = [...problems].sort((a, b) => {
+  const sortedProblems = [...(problems || [])].sort((a, b) => {
     if (sortBy === 'urgency') {
       const urgencyOrder = { critical: 0, high: 1, medium: 2, low: 3 }
       return urgencyOrder[a.urgency] - urgencyOrder[b.urgency]
@@ -146,7 +150,7 @@ export default function UnresolvedProblems() {
         <div className="flex items-center space-x-3">
           <HelpCircle className="w-5 h-5 text-orange-600" />
           <h3 className="text-lg font-semibold text-gray-900">Unresolved Problems</h3>
-          <span className="text-sm text-gray-500">({problems.length})</span>
+          <span className="text-sm text-gray-500">({problems?.length || 0})</span>
         </div>
         
         <div className="flex items-center space-x-2">
@@ -168,7 +172,7 @@ export default function UnresolvedProblems() {
         </div>
       )}
 
-      {problems.length === 0 ? (
+      {!problems || problems.length === 0 ? (
         <div className="text-center py-8">
           <div className="inline-flex items-center justify-center w-12 h-12 bg-green-100 rounded-full mb-3">
             <HelpCircle className="w-6 h-6 text-green-600" />
