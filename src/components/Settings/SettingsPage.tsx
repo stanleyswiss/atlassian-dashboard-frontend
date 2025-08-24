@@ -258,6 +258,37 @@ export default function SettingsPage() {
     }
   }
 
+  const createSettingsTable = async () => {
+    setIsTesting(true)
+    
+    try {
+      const result = await api.post('/api/admin/create-settings-table')
+      
+      console.log('Settings table creation result:', result)
+      
+      if (result && result.success) {
+        const message = result.message || 'Settings table created successfully'
+        setSuccessMessage(`${message} - Settings should now persist properly!`)
+        setTimeout(() => setSuccessMessage(null), 8000)
+      } else {
+        setError(`Settings table creation failed: ${result?.message || 'Unknown error'}`)
+      }
+    } catch (err: any) {
+      console.error('Settings table creation error:', err)
+      
+      let errorMessage = 'Settings table creation failed'
+      if (err.detail) {
+        errorMessage += ': ' + err.detail
+      } else if (err.message) {
+        errorMessage += ': ' + err.message
+      }
+      
+      setError(errorMessage)
+    } finally {
+      setIsTesting(false)
+    }
+  }
+
   const triggerScraping = async () => {
     setIsTesting(true)
     
@@ -706,22 +737,43 @@ export default function SettingsPage() {
           </div>
         </div>
 
-        <div className="flex items-center space-x-4">
-          <button
-            onClick={migrateDatabase}
-            disabled={isTesting}
-            className="flex items-center space-x-2 px-4 py-2 bg-orange-600 text-white rounded-md hover:bg-orange-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
-          >
-            {isTesting ? (
-              <RefreshCw className="h-4 w-4 animate-spin" />
-            ) : (
-              <Database className="h-4 w-4" />
-            )}
-            <span>Migrate Database</span>
-          </button>
+        <div className="space-y-4">
+          <div className="flex items-center space-x-4">
+            <button
+              onClick={createSettingsTable}
+              disabled={isTesting}
+              className="flex items-center space-x-2 px-4 py-2 bg-green-600 text-white rounded-md hover:bg-green-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+            >
+              {isTesting ? (
+                <RefreshCw className="h-4 w-4 animate-spin" />
+              ) : (
+                <Database className="h-4 w-4" />
+              )}
+              <span>Fix Settings Persistence</span>
+            </button>
+            
+            <div className="text-sm text-gray-600">
+              Creates settings table specifically (recommended first)
+            </div>
+          </div>
           
-          <div className="text-sm text-gray-600">
-            Creates settings table and ensures proper data structure
+          <div className="flex items-center space-x-4">
+            <button
+              onClick={migrateDatabase}
+              disabled={isTesting}
+              className="flex items-center space-x-2 px-4 py-2 bg-orange-600 text-white rounded-md hover:bg-orange-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+            >
+              {isTesting ? (
+                <RefreshCw className="h-4 w-4 animate-spin" />
+              ) : (
+                <Database className="h-4 w-4" />
+              )}
+              <span>Full Database Migration</span>
+            </button>
+            
+            <div className="text-sm text-gray-600">
+              Migrates all database structures (more comprehensive)
+            </div>
           </div>
         </div>
       </div>
