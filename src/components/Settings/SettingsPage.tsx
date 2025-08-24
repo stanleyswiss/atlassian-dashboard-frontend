@@ -1,7 +1,6 @@
 import { useState, useEffect } from 'react'
 import { 
   Settings, 
-  Key, 
   Database,
   Clock,
   Shield,
@@ -12,20 +11,20 @@ import {
   AlertTriangle,
   RefreshCw,
   Eye,
-  EyeOff
+  BarChart3
 } from 'lucide-react'
 import LoadingSpinner from '@/components/Common/LoadingSpinner'
 import { ErrorMessage } from '@/components/Common/ErrorBoundary'
 import api from '@/services/api'
 
 interface SettingsConfig {
-  openai_api_key: string
   scraping_enabled: boolean
   scraping_interval: number // hours
-  sentiment_analysis_enabled: boolean
+  vision_analysis_enabled: boolean
   max_posts_per_scrape: number
   auto_cleanup_enabled: boolean
   data_retention_days: number
+  max_pages_per_forum: number
 }
 
 interface TestResult {
@@ -36,13 +35,13 @@ interface TestResult {
 
 export default function SettingsPage() {
   const [config, setConfig] = useState<SettingsConfig>({
-    openai_api_key: '',
     scraping_enabled: false,
     scraping_interval: 6,
-    sentiment_analysis_enabled: false,
+    vision_analysis_enabled: false,
     max_posts_per_scrape: 50,
     auto_cleanup_enabled: true,
-    data_retention_days: 30
+    data_retention_days: 30,
+    max_pages_per_forum: 3
   })
 
   const [isLoading, setIsLoading] = useState(true)
@@ -50,12 +49,17 @@ export default function SettingsPage() {
   const [isTesting, setIsTesting] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const [successMessage, setSuccessMessage] = useState<string | null>(null)
-  const [showApiKey, setShowApiKey] = useState(false)
+  const [showApiStatus, setShowApiStatus] = useState(false)
+
   const [testResults, setTestResults] = useState<{
-    openai?: TestResult,
-    scraping?: TestResult,
-    database?: TestResult
-  }>({})
+    database: TestResult | null
+    scraping: TestResult | null
+    vision_ai: TestResult | null
+  }>({
+    database: null,
+    scraping: null,
+    vision_ai: null
+  })
 
   useEffect(() => {
     loadSettings()
@@ -64,14 +68,15 @@ export default function SettingsPage() {
   const loadSettings = async () => {
     setIsLoading(true)
     setError(null)
-
+    
     try {
-      // Try to load settings from backend using API client
-      const settings = await api.get('/api/settings')
-      setConfig(settings)
+      const response = await api.get('/api/settings/config')
+      if (response.data) {
+        setConfig(response.data)
+      }
     } catch (err: any) {
-      // If backend isn't ready, use defaults
-      console.log('Using default settings')
+      setError('Failed to load settings')
+      console.error('Settings load error:', err)
     } finally {
       setIsLoading(false)
     }
@@ -81,50 +86,42 @@ export default function SettingsPage() {
     setIsSaving(true)
     setError(null)
     setSuccessMessage(null)
-
+    
     try {
-      await api.post('/api/settings', config)
+      await api.post('/api/settings/config', config)
       setSuccessMessage('Settings saved successfully!')
+      
+      // Clear success message after 3 seconds
       setTimeout(() => setSuccessMessage(null), 3000)
     } catch (err: any) {
-      setError(err.detail || err.message || 'Failed to save settings')
+      setError('Failed to save settings')
+      console.error('Settings save error:', err)
     } finally {
       setIsSaving(false)
     }
   }
 
-  const testOpenAI = async () => {
-    if (!config.openai_api_key.trim()) {
-      setTestResults(prev => ({
-        ...prev,
-        openai: { success: false, message: 'API key is required' }
-      }))
-      return
-    }
-
+  const testDatabase = async () => {
     setIsTesting(true)
     
     try {
-      const result = await api.post('/api/settings/test-openai', { 
-        api_key: config.openai_api_key,
-        test_text: "This is a test message for sentiment analysis." 
-      })
+      const result = await api.get('/api/settings/status')
       
-      setTestResults(prev => ({
-        ...prev,
-        openai: { 
-          success: true, 
-          message: 'OpenAI API connection successful!',
-          details: result
-        }
-      }))
+      if (result.data.database && result.data.database.status === 'connected') {
+        setTestResults(prev => ({
+          ...prev,
+          database: { success: true, message: 'Database connection successful', details: result.data.database }
+        }))
+      } else {
+        setTestResults(prev => ({
+          ...prev,
+          database: { success: false, message: 'Database connection failed' }
+        }))
+      }
     } catch (err: any) {
       setTestResults(prev => ({
         ...prev,
-        openai: { 
-          success: false, 
-          message: err.detail || err.message || 'OpenAI API test failed'
-        }
+        database: { success: false, message: 'Database test failed: ' + err.message }
       }))
     } finally {
       setIsTesting(false)
@@ -137,68 +134,75 @@ export default function SettingsPage() {
     try {
       const result = await api.get('/api/scraping/test-single-forum/jira')
       
-      setTestResults(prev => ({
-        ...prev,
-        scraping: { 
-          success: true, 
-          message: `Successfully scraped ${result.posts_scraped} posts from Jira forum`,
-          details: result
-        }
-      }))
-    } catch (err: any) {
-      setTestResults(prev => ({
-        ...prev,
-        scraping: { 
-          success: false, 
-          message: err.detail || err.message || 'Scraping test failed'
-        }
-      }))
-    } finally {
-      setIsTesting(false)
-    }
-  }
-
-  const testDatabase = async () => {
-    setIsTesting(true)
-    
-    try {
-      const result = await api.get('/api/settings/status')
-      
-      if (result.database && result.database.status === 'connected') {
+      if (result.data && result.data.posts_scraped > 0) {
         setTestResults(prev => ({
           ...prev,
-          database: { 
+          scraping: { 
             success: true, 
-            message: result.database.message,
-            details: result
+            message: `Successfully scraped ${result.data.posts_scraped} posts from Jira forum`,
+            details: result.data 
           }
         }))
       } else {
         setTestResults(prev => ({
           ...prev,
-          database: { 
-            success: false, 
-            message: result.database?.message || 'Database test failed'
-          }
+          scraping: { success: false, message: 'No posts were scraped' }
         }))
       }
     } catch (err: any) {
       setTestResults(prev => ({
         ...prev,
-        database: { 
-          success: false, 
-          message: err.detail || err.message || 'Failed to test database'
-        }
+        scraping: { success: false, message: 'Scraping test failed: ' + err.message }
       }))
     } finally {
       setIsTesting(false)
     }
   }
 
-  const maskApiKey = (key: string): string => {
-    if (!key) return ''
-    if (key.length <= 8) return '*'.repeat(key.length)
-    return key.slice(0, 4) + '*'.repeat(key.length - 8) + key.slice(-4)
+  const testVisionAI = async () => {
+    setIsTesting(true)
+    
+    try {
+      const result = await api.get('/api/business-intelligence/stats')
+      
+      if (result.data) {
+        const hasVision = result.data.vision_analysis_coverage?.vision_coverage_percentage > 0
+        setTestResults(prev => ({
+          ...prev,
+          vision_ai: { 
+            success: true, 
+            message: hasVision 
+              ? `Vision AI working - ${result.data.vision_analysis_coverage.vision_coverage_percentage}% coverage`
+              : 'Vision AI service available but no analyzed posts yet',
+            details: result.data 
+          }
+        }))
+      } else {
+        setTestResults(prev => ({
+          ...prev,
+          vision_ai: { success: false, message: 'Vision AI status unavailable' }
+        }))
+      }
+    } catch (err: any) {
+      setTestResults(prev => ({
+        ...prev,
+        vision_ai: { success: false, message: 'Vision AI test failed: ' + err.message }
+      }))
+    } finally {
+      setIsTesting(false)
+    }
+  }
+
+  const getTestIcon = (result: TestResult | null) => {
+    if (!result) return <TestTube className="w-4 h-4 text-gray-400" />
+    if (result.success) return <CheckCircle2 className="w-4 h-4 text-green-600" />
+    return <XCircle className="w-4 h-4 text-red-600" />
+  }
+
+  const getTestColor = (result: TestResult | null) => {
+    if (!result) return 'text-gray-600'
+    if (result.success) return 'text-green-600'
+    return 'text-red-600'
   }
 
   if (isLoading) {
@@ -211,14 +215,6 @@ export default function SettingsPage() {
     )
   }
 
-  if (error && !config.openai_api_key) {
-    return (
-      <div className="space-y-6">
-        <ErrorMessage error={error} onRetry={loadSettings} />
-      </div>
-    )
-  }
-
   return (
     <div className="space-y-6">
       {/* Header */}
@@ -226,14 +222,14 @@ export default function SettingsPage() {
         <div>
           <h1 className="text-2xl font-bold text-gray-900">Settings</h1>
           <p className="text-gray-600 mt-1">
-            Configure API keys, scraping, and data collection settings
+            Configure scraping, analysis, and business intelligence features
           </p>
         </div>
         
         <button
           onClick={saveSettings}
           disabled={isSaving}
-          className="flex items-center space-x-2 px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 disabled:opacity-50 transition-colors"
+          className="flex items-center space-x-2 px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
         >
           {isSaving ? (
             <RefreshCw className="h-4 w-4 animate-spin" />
@@ -244,105 +240,134 @@ export default function SettingsPage() {
         </button>
       </div>
 
-      {/* Success/Error Messages */}
+      {/* Status Messages */}
+      {error && (
+        <ErrorMessage error={error} onRetry={() => setError(null)} />
+      )}
+      
       {successMessage && (
         <div className="bg-green-50 border border-green-200 rounded-md p-4">
           <div className="flex items-center">
             <CheckCircle2 className="h-5 w-5 text-green-600 mr-3" />
-            <span className="text-green-800">{successMessage}</span>
+            <p className="text-green-800">{successMessage}</p>
           </div>
         </div>
       )}
 
-      {error && (
-        <div className="bg-red-50 border border-red-200 rounded-md p-4">
-          <div className="flex items-center">
-            <XCircle className="h-5 w-5 text-red-600 mr-3" />
-            <span className="text-red-800">{error}</span>
+      {/* API Status Warning */}
+      <div className="dashboard-card bg-blue-50 border-blue-200">
+        <div className="flex items-start space-x-3">
+          <Shield className="w-5 h-5 text-blue-600 mt-0.5" />
+          <div className="flex-1">
+            <h3 className="font-medium text-blue-900">Security Notice</h3>
+            <p className="text-sm text-blue-700 mt-1">
+              OpenAI API key is configured securely on the server. Vision AI and enhanced analysis 
+              will work automatically when a valid key is set in the backend environment.
+            </p>
+            <button 
+              onClick={() => setShowApiStatus(!showApiStatus)}
+              className="mt-2 text-sm text-blue-600 hover:text-blue-700 font-medium flex items-center space-x-1"
+            >
+              <Eye className="w-4 h-4" />
+              <span>{showApiStatus ? 'Hide' : 'Show'} API Status</span>
+            </button>
+            
+            {showApiStatus && (
+              <div className="mt-3 p-3 bg-white border border-blue-200 rounded-md">
+                <p className="text-xs text-gray-600">
+                  Set OPENAI_API_KEY in your backend environment variables for full functionality.
+                  Never expose API keys in frontend code.
+                </p>
+              </div>
+            )}
           </div>
         </div>
-      )}
+      </div>
 
-      {/* API Configuration */}
+      {/* System Tests */}
       <div className="dashboard-card">
         <div className="flex items-center space-x-3 mb-6">
-          <div className="p-2 bg-blue-50 rounded-lg">
-            <Key className="h-5 w-5 text-blue-600" />
-          </div>
-          <div>
-            <h3 className="text-lg font-semibold text-gray-900">API Configuration</h3>
-            <p className="text-sm text-gray-600">Configure external API keys and services</p>
-          </div>
+          <TestTube className="w-5 h-5 text-purple-600" />
+          <h3 className="text-lg font-semibold text-gray-900">System Tests</h3>
         </div>
-
-        <div className="space-y-6">
-          {/* OpenAI API Key */}
-          <div>
-            <label className="block text-sm font-medium text-gray-700 mb-2">
-              OpenAI API Key *
-            </label>
-            <div className="relative">
-              <input
-                type={showApiKey ? "text" : "password"}
-                value={config.openai_api_key}
-                onChange={(e) => setConfig({...config, openai_api_key: e.target.value})}
-                placeholder="sk-..."
-                className="w-full border border-gray-300 rounded-md px-3 py-2 pr-20 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-              />
-              <div className="absolute inset-y-0 right-0 flex items-center space-x-1 pr-3">
-                <button
-                  type="button"
-                  onClick={() => setShowApiKey(!showApiKey)}
-                  className="text-gray-400 hover:text-gray-600 transition-colors"
-                >
-                  {showApiKey ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
-                </button>
-                <button
-                  onClick={testOpenAI}
-                  disabled={isTesting || !config.openai_api_key.trim()}
-                  className="ml-2 px-2 py-1 bg-blue-600 text-white rounded text-xs hover:bg-blue-700 disabled:opacity-50 transition-colors"
-                >
-                  {isTesting ? <RefreshCw className="h-3 w-3 animate-spin" /> : <TestTube className="h-3 w-3" />}
-                </button>
+        
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
+          {/* Database Test */}
+          <div className="border border-gray-200 rounded-lg p-4">
+            <div className="flex items-center justify-between mb-3">
+              <div className="flex items-center space-x-2">
+                <Database className="w-4 h-4 text-gray-600" />
+                <span className="text-sm font-medium">Database</span>
               </div>
+              <button
+                onClick={testDatabase}
+                disabled={isTesting}
+                className="text-sm text-blue-600 hover:text-blue-700 disabled:opacity-50"
+              >
+                Test
+              </button>
             </div>
-            <p className="text-xs text-gray-600 mt-1">
-              Required for sentiment analysis. Get your API key from{' '}
-              <a href="https://platform.openai.com/api-keys" target="_blank" rel="noopener noreferrer" className="text-blue-600 hover:underline">
-                OpenAI Platform
-              </a>
-            </p>
             
-            {testResults.openai && (
-              <div className={`mt-2 p-3 rounded-md ${testResults.openai.success ? 'bg-green-50 border border-green-200' : 'bg-red-50 border border-red-200'}`}>
-                <div className="flex items-center">
-                  {testResults.openai.success ? (
-                    <CheckCircle2 className="h-4 w-4 text-green-600 mr-2" />
-                  ) : (
-                    <XCircle className="h-4 w-4 text-red-600 mr-2" />
-                  )}
-                  <span className={`text-sm ${testResults.openai.success ? 'text-green-800' : 'text-red-800'}`}>
-                    {testResults.openai.message}
-                  </span>
+            {testResults.database && (
+              <div className={`text-sm ${getTestColor(testResults.database)}`}>
+                <div className="flex items-center space-x-2">
+                  {getTestIcon(testResults.database)}
+                  <span>{testResults.database.message}</span>
                 </div>
               </div>
             )}
           </div>
 
-          {/* Sentiment Analysis Settings */}
-          <div>
-            <label className="flex items-center space-x-3">
-              <input
-                type="checkbox"
-                checked={config.sentiment_analysis_enabled}
-                onChange={(e) => setConfig({...config, sentiment_analysis_enabled: e.target.checked})}
-                className="rounded border-gray-300 text-blue-600 focus:ring-blue-500"
-              />
-              <div>
-                <span className="font-medium text-gray-900">Enable Sentiment Analysis</span>
-                <p className="text-sm text-gray-600">Analyze sentiment of scraped posts using OpenAI</p>
+          {/* Scraping Test */}
+          <div className="border border-gray-200 rounded-lg p-4">
+            <div className="flex items-center justify-between mb-3">
+              <div className="flex items-center space-x-2">
+                <RefreshCw className="w-4 h-4 text-gray-600" />
+                <span className="text-sm font-medium">Scraping</span>
               </div>
-            </label>
+              <button
+                onClick={testScraping}
+                disabled={isTesting}
+                className="text-sm text-blue-600 hover:text-blue-700 disabled:opacity-50"
+              >
+                Test
+              </button>
+            </div>
+            
+            {testResults.scraping && (
+              <div className={`text-sm ${getTestColor(testResults.scraping)}`}>
+                <div className="flex items-center space-x-2">
+                  {getTestIcon(testResults.scraping)}
+                  <span>{testResults.scraping.message}</span>
+                </div>
+              </div>
+            )}
+          </div>
+
+          {/* Vision AI Test */}
+          <div className="border border-gray-200 rounded-lg p-4">
+            <div className="flex items-center justify-between mb-3">
+              <div className="flex items-center space-x-2">
+                <BarChart3 className="w-4 h-4 text-gray-600" />
+                <span className="text-sm font-medium">Vision AI</span>
+              </div>
+              <button
+                onClick={testVisionAI}
+                disabled={isTesting}
+                className="text-sm text-blue-600 hover:text-blue-700 disabled:opacity-50"
+              >
+                Test
+              </button>
+            </div>
+            
+            {testResults.vision_ai && (
+              <div className={`text-sm ${getTestColor(testResults.vision_ai)}`}>
+                <div className="flex items-center space-x-2">
+                  {getTestIcon(testResults.vision_ai)}
+                  <span>{testResults.vision_ai.message}</span>
+                </div>
+              </div>
+            )}
           </div>
         </div>
       </div>
@@ -350,97 +375,85 @@ export default function SettingsPage() {
       {/* Scraping Configuration */}
       <div className="dashboard-card">
         <div className="flex items-center space-x-3 mb-6">
-          <div className="p-2 bg-green-50 rounded-lg">
-            <Database className="h-5 w-5 text-green-600" />
-          </div>
-          <div>
-            <h3 className="text-lg font-semibold text-gray-900">Data Collection</h3>
-            <p className="text-sm text-gray-600">Configure automated scraping of Atlassian Community</p>
-          </div>
+          <RefreshCw className="w-5 h-5 text-green-600" />
+          <h3 className="text-lg font-semibold text-gray-900">Scraping Configuration</h3>
         </div>
-
-        <div className="space-y-6">
-          {/* Enable Scraping */}
+        
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
           <div>
-            <label className="flex items-center space-x-3">
+            <label className="flex items-center space-x-3 mb-4">
               <input
                 type="checkbox"
                 checked={config.scraping_enabled}
                 onChange={(e) => setConfig({...config, scraping_enabled: e.target.checked})}
                 className="rounded border-gray-300 text-blue-600 focus:ring-blue-500"
               />
-              <div>
-                <span className="font-medium text-gray-900">Enable Automated Scraping</span>
-                <p className="text-sm text-gray-600">Automatically collect posts from Atlassian Community forums</p>
-              </div>
+              <span className="text-sm font-medium text-gray-700">Enable Automatic Scraping</span>
             </label>
-          </div>
-
-          {/* Scraping Interval */}
-          <div>
-            <label className="block text-sm font-medium text-gray-700 mb-2">
-              Scraping Interval
-            </label>
-            <select
-              value={config.scraping_interval}
-              onChange={(e) => setConfig({...config, scraping_interval: parseInt(e.target.value)})}
-              className="w-48 border border-gray-300 rounded-md px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500"
-            >
-              <option value={1}>Every hour</option>
-              <option value={2}>Every 2 hours</option>
-              <option value={4}>Every 4 hours</option>
-              <option value={6}>Every 6 hours</option>
-              <option value={12}>Every 12 hours</option>
-              <option value={24}>Daily</option>
-            </select>
-            <p className="text-xs text-gray-600 mt-1">How often to collect new posts</p>
-          </div>
-
-          {/* Max Posts */}
-          <div>
-            <label className="block text-sm font-medium text-gray-700 mb-2">
-              Max Posts Per Scrape
-            </label>
-            <input
-              type="number"
-              min="10"
-              max="200"
-              value={config.max_posts_per_scrape}
-              onChange={(e) => setConfig({...config, max_posts_per_scrape: parseInt(e.target.value)})}
-              className="w-32 border border-gray-300 rounded-md px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500"
-            />
-            <p className="text-xs text-gray-600 mt-1">Maximum posts to collect per forum per scrape</p>
-          </div>
-
-          {/* Test Scraping */}
-          <div>
-            <button
-              onClick={testScraping}
-              disabled={isTesting}
-              className="flex items-center space-x-2 px-3 py-2 bg-green-600 text-white rounded-md hover:bg-green-700 disabled:opacity-50 transition-colors text-sm"
-            >
-              {isTesting ? (
-                <RefreshCw className="h-4 w-4 animate-spin" />
-              ) : (
-                <TestTube className="h-4 w-4" />
-              )}
-              <span>Test Scraping</span>
-            </button>
             
-            {testResults.scraping && (
-              <div className={`mt-2 p-3 rounded-md ${testResults.scraping.success ? 'bg-green-50 border border-green-200' : 'bg-red-50 border border-red-200'}`}>
-                <div className="flex items-center">
-                  {testResults.scraping.success ? (
-                    <CheckCircle2 className="h-4 w-4 text-green-600 mr-2" />
-                  ) : (
-                    <XCircle className="h-4 w-4 text-red-600 mr-2" />
-                  )}
-                  <span className={`text-sm ${testResults.scraping.success ? 'text-green-800' : 'text-red-800'}`}>
-                    {testResults.scraping.message}
-                  </span>
-                </div>
+            <div className="space-y-4">
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-2">
+                  Scraping Interval (hours)
+                </label>
+                <input
+                  type="number"
+                  min="1"
+                  max="24"
+                  value={config.scraping_interval}
+                  onChange={(e) => setConfig({...config, scraping_interval: parseInt(e.target.value)})}
+                  className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                />
+                <p className="text-xs text-gray-500 mt-1">How often to scrape new posts</p>
               </div>
-            )}
+              
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-2">
+                  Max Posts Per Scrape
+                </label>
+                <input
+                  type="number"
+                  min="10"
+                  max="200"
+                  value={config.max_posts_per_scrape}
+                  onChange={(e) => setConfig({...config, max_posts_per_scrape: parseInt(e.target.value)})}
+                  className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                />
+                <p className="text-xs text-gray-500 mt-1">Maximum posts to scrape per forum</p>
+              </div>
+            </div>
+          </div>
+          
+          <div>
+            <div className="space-y-4">
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-2">
+                  Max Pages Per Forum
+                </label>
+                <input
+                  type="number"
+                  min="1"
+                  max="10"
+                  value={config.max_pages_per_forum}
+                  onChange={(e) => setConfig({...config, max_pages_per_forum: parseInt(e.target.value)})}
+                  className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                />
+                <p className="text-xs text-gray-500 mt-1">How many pages to scrape per forum</p>
+              </div>
+              
+              <label className="flex items-center space-x-3">
+                <input
+                  type="checkbox"
+                  checked={config.vision_analysis_enabled}
+                  onChange={(e) => setConfig({...config, vision_analysis_enabled: e.target.checked})}
+                  className="rounded border-gray-300 text-blue-600 focus:ring-blue-500"
+                />
+                <div>
+                  <span className="text-sm font-medium text-gray-700">Enable Vision AI Analysis</span>
+                  <p className="text-xs text-gray-500">Analyze screenshots in posts (requires OpenAI key)</p>
+                </div>
+              </label>
+            </div>
           </div>
         </div>
       </div>
@@ -448,160 +461,54 @@ export default function SettingsPage() {
       {/* Data Management */}
       <div className="dashboard-card">
         <div className="flex items-center space-x-3 mb-6">
-          <div className="p-2 bg-purple-50 rounded-lg">
-            <Shield className="h-5 w-5 text-purple-600" />
-          </div>
-          <div>
-            <h3 className="text-lg font-semibold text-gray-900">Data Management</h3>
-            <p className="text-sm text-gray-600">Configure data retention and cleanup policies</p>
-          </div>
+          <Database className="w-5 h-5 text-blue-600" />
+          <h3 className="text-lg font-semibold text-gray-900">Data Management</h3>
         </div>
-
-        <div className="space-y-6">
-          {/* Auto Cleanup */}
+        
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
           <div>
-            <label className="flex items-center space-x-3">
+            <label className="flex items-center space-x-3 mb-4">
               <input
                 type="checkbox"
                 checked={config.auto_cleanup_enabled}
                 onChange={(e) => setConfig({...config, auto_cleanup_enabled: e.target.checked})}
                 className="rounded border-gray-300 text-blue-600 focus:ring-blue-500"
               />
-              <div>
-                <span className="font-medium text-gray-900">Enable Auto Cleanup</span>
-                <p className="text-sm text-gray-600">Automatically remove old data to manage storage</p>
-              </div>
+              <span className="text-sm font-medium text-gray-700">Enable Auto Cleanup</span>
             </label>
-          </div>
-
-          {/* Data Retention */}
-          <div>
-            <label className="block text-sm font-medium text-gray-700 mb-2">
-              Data Retention Period
-            </label>
-            <select
-              value={config.data_retention_days}
-              onChange={(e) => setConfig({...config, data_retention_days: parseInt(e.target.value)})}
-              className="w-48 border border-gray-300 rounded-md px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500"
-              disabled={!config.auto_cleanup_enabled}
-            >
-              <option value={7}>7 days</option>
-              <option value={14}>14 days</option>
-              <option value={30}>30 days</option>
-              <option value={60}>60 days</option>
-              <option value={90}>90 days</option>
-            </select>
-            <p className="text-xs text-gray-600 mt-1">How long to keep collected data</p>
-          </div>
-
-          {/* Test Database */}
-          <div>
-            <button
-              onClick={testDatabase}
-              disabled={isTesting}
-              className="flex items-center space-x-2 px-3 py-2 bg-purple-600 text-white rounded-md hover:bg-purple-700 disabled:opacity-50 transition-colors text-sm"
-            >
-              {isTesting ? (
-                <RefreshCw className="h-4 w-4 animate-spin" />
-              ) : (
-                <TestTube className="h-4 w-4" />
-              )}
-              <span>Test Database</span>
-            </button>
             
-            {testResults.database && (
-              <div className={`mt-2 p-3 rounded-md ${testResults.database.success ? 'bg-green-50 border border-green-200' : 'bg-red-50 border border-red-200'}`}>
-                <div className="flex items-center">
-                  {testResults.database.success ? (
-                    <CheckCircle2 className="h-4 w-4 text-green-600 mr-2" />
-                  ) : (
-                    <XCircle className="h-4 w-4 text-red-600 mr-2" />
-                  )}
-                  <span className={`text-sm ${testResults.database.success ? 'text-green-800' : 'text-red-800'}`}>
-                    {testResults.database.message}
-                  </span>
-                </div>
-              </div>
-            )}
-          </div>
-        </div>
-      </div>
-
-      {/* Status Overview */}
-      <div className="dashboard-card">
-        <div className="flex items-center space-x-3 mb-6">
-          <div className="p-2 bg-yellow-50 rounded-lg">
-            <Clock className="h-5 w-5 text-yellow-600" />
-          </div>
-          <div>
-            <h3 className="text-lg font-semibold text-gray-900">System Status</h3>
-            <p className="text-sm text-gray-600">Current status of all services</p>
-          </div>
-        </div>
-
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-          <div className="flex items-center justify-between p-3 bg-gray-50 rounded-lg">
-            <span className="text-sm font-medium text-gray-900">OpenAI API</span>
-            <span className={`text-xs px-2 py-1 rounded ${
-              testResults.openai?.success ? 'bg-green-100 text-green-800' :
-              testResults.openai?.success === false ? 'bg-red-100 text-red-800' :
-              'bg-gray-100 text-gray-800'
-            }`}>
-              {testResults.openai?.success ? 'Connected' :
-               testResults.openai?.success === false ? 'Error' :
-               'Not Tested'}
-            </span>
-          </div>
-
-          <div className="flex items-center justify-between p-3 bg-gray-50 rounded-lg">
-            <span className="text-sm font-medium text-gray-900">Scraping</span>
-            <span className={`text-xs px-2 py-1 rounded ${
-              testResults.scraping?.success ? 'bg-green-100 text-green-800' :
-              testResults.scraping?.success === false ? 'bg-red-100 text-red-800' :
-              'bg-gray-100 text-gray-800'
-            }`}>
-              {testResults.scraping?.success ? 'Working' :
-               testResults.scraping?.success === false ? 'Error' :
-               'Not Tested'}
-            </span>
-          </div>
-
-          <div className="flex items-center justify-between p-3 bg-gray-50 rounded-lg">
-            <span className="text-sm font-medium text-gray-900">Database</span>
-            <span className={`text-xs px-2 py-1 rounded ${
-              testResults.database?.success ? 'bg-green-100 text-green-800' :
-              testResults.database?.success === false ? 'bg-red-100 text-red-800' :
-              'bg-gray-100 text-gray-800'
-            }`}>
-              {testResults.database?.success ? 'Connected' :
-               testResults.database?.success === false ? 'Error' :
-               'Not Tested'}
-            </span>
-          </div>
-        </div>
-      </div>
-
-      {/* Getting Started Guide */}
-      {!config.openai_api_key && (
-        <div className="dashboard-card">
-          <div className="flex items-start space-x-3">
-            <AlertTriangle className="h-6 w-6 text-yellow-600 flex-shrink-0 mt-1" />
             <div>
-              <h3 className="text-lg font-semibold text-gray-900 mb-2">Getting Started</h3>
-              <div className="text-sm text-gray-600 space-y-2">
-                <p>To enable live data collection and AI sentiment analysis:</p>
-                <ol className="list-decimal list-inside space-y-1 ml-4">
-                  <li>Get your OpenAI API key from <a href="https://platform.openai.com/api-keys" target="_blank" rel="noopener noreferrer" className="text-blue-600 hover:underline">OpenAI Platform</a></li>
-                  <li>Enter your API key above and test the connection</li>
-                  <li>Enable sentiment analysis and scraping</li>
-                  <li>Save your settings</li>
-                  <li>Go to Posts page and trigger data collection</li>
-                </ol>
-              </div>
+              <label className="block text-sm font-medium text-gray-700 mb-2">
+                Data Retention (days)
+              </label>
+              <input
+                type="number"
+                min="7"
+                max="365"
+                value={config.data_retention_days}
+                onChange={(e) => setConfig({...config, data_retention_days: parseInt(e.target.value)})}
+                className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                disabled={!config.auto_cleanup_enabled}
+              />
+              <p className="text-xs text-gray-500 mt-1">
+                How long to keep scraped data
+              </p>
+            </div>
+          </div>
+          
+          <div className="flex items-center justify-center">
+            <div className="text-center">
+              <Clock className="w-12 h-12 text-gray-400 mx-auto mb-3" />
+              <p className="text-sm text-gray-600">
+                {config.auto_cleanup_enabled 
+                  ? `Data older than ${config.data_retention_days} days will be automatically removed`
+                  : 'Auto cleanup is disabled - data will be kept indefinitely'
+                }
+              </p>
             </div>
           </div>
         </div>
-      )}
+      </div>
     </div>
   )
 }

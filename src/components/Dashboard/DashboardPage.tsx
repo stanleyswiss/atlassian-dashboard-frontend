@@ -5,6 +5,13 @@ import StatsCards from './StatsCards'
 import ActivityChart from './ActivityChart'
 import RecentPosts from './RecentPosts'
 import TrendingTopics from './TrendingTopics'
+import CommunityIntelligenceWidget from './CommunityIntelligenceWidget'
+// Enhanced Business Intelligence Components
+import CriticalIssues from './CriticalIssues'
+import AwesomeDiscoveries from './AwesomeDiscoveries'
+import TrendingSolutions from './TrendingSolutions'
+import UnresolvedProblems from './UnresolvedProblems'
+import BusinessInsights from './BusinessInsights'
 import { DashboardOverview } from '@/types'
 import { dashboardService } from '@/services'
 import LoadingSpinner from '@/components/Common/LoadingSpinner'
@@ -85,9 +92,9 @@ export default function DashboardPage() {
       {/* Page Header with Refresh Info */}
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-2xl font-bold text-gray-900">Community Overview</h1>
+          <h1 className="text-2xl font-bold text-gray-900">Business Intelligence Dashboard</h1>
           <p className="text-gray-600 mt-1">
-            Real-time insights into Atlassian Community activity
+            Actionable insights from Atlassian Community with Vision AI analysis
           </p>
         </div>
         
@@ -134,17 +141,40 @@ export default function DashboardPage() {
         onRetry={handleRetry}
       />
 
-      {/* Charts and Additional Data */}
+      {/* Business Intelligence Dashboard - Replaces basic analytics */}
+      
+      {/* Executive Summary */}
+      <BusinessInsights />
+
+      {/* Critical Issues Section */}
+      <CriticalIssues />
+
+      {/* Solutions and Discoveries Grid */}
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-        {/* Activity Chart */}
+        <TrendingSolutions />
+        <AwesomeDiscoveries />
+      </div>
+
+      {/* Problems Section */}
+      <UnresolvedProblems />
+
+      {/* Legacy Analytics (Condensed) */}
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+        {/* Activity Chart - Smaller */}
         <div className="lg:col-span-2">
           <ActivityChart />
         </div>
         
-        {/* Recent Posts */}
+        {/* Community Intelligence Widget */}
+        <CommunityIntelligenceWidget onNavigate={(page) => {
+          // Navigate to analytics page
+          window.location.hash = '#/analytics'
+        }} />
+      </div>
+
+      {/* Recent Activity - Compact */}
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
         <RecentPosts />
-        
-        {/* Trending Topics */}
         <TrendingTopics />
       </div>
 
