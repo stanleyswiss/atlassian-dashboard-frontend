@@ -197,7 +197,7 @@ export default function SettingsPage() {
     setIsTesting(true)
     
     try {
-      const result = await api.post('/api/admin/migrate-database')
+      const result = await api.post('/api/admin/migrate-database?force_recreate=true')
       
       console.log('Migration API response:', result) // Debug log
       
