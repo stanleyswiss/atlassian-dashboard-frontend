@@ -232,6 +232,38 @@ export default function SettingsPage() {
     }
   }
 
+  const testPostsQuery = async () => {
+    setIsTesting(true)
+    
+    try {
+      const result = await api.get('/api/admin/test-posts-query')
+      
+      console.log('Posts query test result:', result) // Debug log
+      
+      if (result.data && result.data.success) {
+        setSuccessMessage(`Posts query successful! Total posts: ${result.data.total_posts}`)
+        setTimeout(() => setSuccessMessage(null), 3000)
+      } else {
+        const errorMsg = result.data?.error || 'Unknown error'
+        setError(`Posts query failed: ${errorMsg}`)
+        console.error('Posts query error details:', result.data)
+      }
+    } catch (err: any) {
+      console.error('Posts query test error:', err)
+      
+      let errorMessage = 'Posts query test failed'
+      if (err.response?.data?.detail) {
+        errorMessage += ': ' + err.response.data.detail
+      } else if (err.message) {
+        errorMessage += ': ' + err.message
+      }
+      
+      setError(errorMessage)
+    } finally {
+      setIsTesting(false)
+    }
+  }
+
   const getTestIcon = (result: TestResult | null) => {
     if (!result) return <TestTube className="w-4 h-4 text-gray-400" />
     if (result.success) return <CheckCircle2 className="w-4 h-4 text-green-600" />
@@ -341,6 +373,19 @@ export default function SettingsPage() {
               <Database className="h-4 w-4" />
             )}
             <span>Migrate DB</span>
+          </button>
+          
+          <button
+            onClick={testPostsQuery}
+            disabled={isTesting}
+            className="flex items-center space-x-2 px-3 py-2 bg-blue-600 text-white text-sm rounded-md hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+          >
+            {isTesting ? (
+              <RefreshCw className="h-4 w-4 animate-spin" />
+            ) : (
+              <Database className="h-4 w-4" />
+            )}
+            <span>Test Posts</span>
           </button>
         </div>
         
