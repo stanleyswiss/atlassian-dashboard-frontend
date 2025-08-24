@@ -327,6 +327,46 @@ export default function SettingsPage() {
     }
   }
 
+  const checkAIStatus = async () => {
+    setIsTesting(true)
+    
+    try {
+      const result = await api.get('/api/admin/analyze-posts-status')
+      
+      console.log('AI Analysis Status:', result)
+      
+      if (result && result.success) {
+        const analysis = result.analysis_status
+        const diagnosis = result.diagnosis
+        
+        console.log('Analysis breakdown:', analysis)
+        console.log('Sample posts:', result.sample_recent_posts)
+        
+        const coverage = analysis?.analysis_coverage_percent || 0
+        const totalPosts = analysis?.total_posts || 0
+        const visionPosts = analysis?.posts_with_vision_analysis || 0
+        
+        setSuccessMessage(`AI Analysis: ${coverage}% coverage. ${visionPosts}/${totalPosts} posts have Vision AI. Status: ${diagnosis?.vision_ai_working ? 'WORKING' : 'NOT WORKING'}`)
+        setTimeout(() => setSuccessMessage(null), 12000)
+      } else {
+        setError(`AI analysis check failed: ${result?.error || 'Unknown error'}`)
+      }
+    } catch (err: any) {
+      console.error('AI analysis check error:', err)
+      
+      let errorMessage = 'AI analysis check failed'
+      if (err.detail) {
+        errorMessage += ': ' + err.detail
+      } else if (err.message) {
+        errorMessage += ': ' + err.message
+      }
+      
+      setError(errorMessage)
+    } finally {
+      setIsTesting(false)
+    }
+  }
+
   const triggerScraping = async () => {
     setIsTesting(true)
     
@@ -830,6 +870,25 @@ export default function SettingsPage() {
             
             <div className="text-sm text-gray-600">
               Test settings read/write functionality (check console)
+            </div>
+          </div>
+          
+          <div className="flex items-center space-x-4">
+            <button
+              onClick={checkAIStatus}
+              disabled={isTesting}
+              className="flex items-center space-x-2 px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+            >
+              {isTesting ? (
+                <RefreshCw className="h-4 w-4 animate-spin" />
+              ) : (
+                <Eye className="h-4 w-4" />
+              )}
+              <span>Check AI Analysis Status</span>
+            </button>
+            
+            <div className="text-sm text-gray-600">
+              Verify if Vision AI is actually analyzing your posts
             </div>
           </div>
         </div>
