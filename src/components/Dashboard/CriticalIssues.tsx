@@ -35,7 +35,11 @@ export default function CriticalIssues() {
     
     try {
       const response = await api.get(`/api/business-intelligence/critical-issues?days=${timeFrame}`)
-      setIssues(response.data)
+      console.log('Critical Issues API Response:', response) // Debug log
+      
+      // Ensure response.data is an array
+      const data = Array.isArray(response.data) ? response.data : []
+      setIssues(data)
     } catch (err: any) {
       console.error('Failed to load critical issues:', err)
       setError('Failed to load critical issues')
@@ -108,7 +112,7 @@ export default function CriticalIssues() {
         <div className="flex items-center space-x-3">
           <AlertTriangle className="w-5 h-5 text-red-600" />
           <h3 className="text-lg font-semibold text-gray-900">Critical Issues</h3>
-          <span className="text-sm text-gray-500">({issues.length})</span>
+          <span className="text-sm text-gray-500">({issues?.length || 0})</span>
         </div>
         
         <select
@@ -128,7 +132,7 @@ export default function CriticalIssues() {
         </div>
       )}
 
-      {issues.length === 0 ? (
+      {!issues || issues.length === 0 ? (
         <div className="text-center py-8">
           <div className="inline-flex items-center justify-center w-12 h-12 bg-green-100 rounded-full mb-3">
             <AlertTriangle className="w-6 h-6 text-green-600" />
@@ -138,7 +142,7 @@ export default function CriticalIssues() {
         </div>
       ) : (
         <div className="space-y-4">
-          {issues.map((issue, index) => (
+          {issues?.map((issue, index) => (
             <div
               key={index}
               className={`border rounded-lg p-4 ${getSeverityColor(issue.severity)}`}

@@ -107,15 +107,21 @@ export default function SettingsPage() {
     try {
       const result = await api.get('/api/settings/status')
       
-      if (result.data.database && result.data.database.status === 'connected') {
+      console.log('Database test result:', result) // Debug log
+      
+      // Handle different possible response structures
+      const data = result.data || result
+      const database = data.database || {}
+      
+      if (database.status === 'connected') {
         setTestResults(prev => ({
           ...prev,
-          database: { success: true, message: 'Database connection successful', details: result.data.database }
+          database: { success: true, message: 'Database connection successful', details: database }
         }))
       } else {
         setTestResults(prev => ({
           ...prev,
-          database: { success: false, message: 'Database connection failed' }
+          database: { success: false, message: database.message || 'Database connection failed' }
         }))
       }
     } catch (err: any) {
