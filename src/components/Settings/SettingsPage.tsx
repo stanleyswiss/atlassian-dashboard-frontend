@@ -493,7 +493,7 @@ export default function SettingsPage() {
       while (shouldContinue && batchCount < 20) { // Safety limit of 20 batches
         batchCount++
         
-        const result = await api.post('/api/admin/analyze-all-posts', 
+        const result = await api.post('/api/admin/force-reanalyze-posts', 
           { batch_size: 5 }, // Small batch size
           { timeout: 60000 } // 1 minute timeout per batch
         )
@@ -555,7 +555,7 @@ export default function SettingsPage() {
     setAnalysisBatchRunning(true)
     
     try {
-      const result = await api.post('/api/admin/analyze-next-batch', 
+      const result = await api.post('/api/admin/force-reanalyze-posts', 
         { batch_size: 3 }, // Smaller batch for quick continuation
         { timeout: 45000 } // 45 seconds timeout
       )
