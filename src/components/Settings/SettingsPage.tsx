@@ -199,15 +199,34 @@ export default function SettingsPage() {
     try {
       const result = await api.post('/api/admin/migrate-database')
       
-      if (result.data.success) {
-        setSuccessMessage(`Database migration successful! Added: ${result.data.added_columns.join(', ')}`)
+      console.log('Migration API response:', result) // Debug log
+      
+      // Handle different possible response structures
+      const data = result.data || result
+      
+      if (data && (data.success === true || data.message)) {
+        const addedColumns = data.added_columns || []
+        const message = data.message || 'Database migration completed'
+        setSuccessMessage(`${message}${addedColumns.length > 0 ? ` Added: ${addedColumns.join(', ')}` : ''}`)
         setTimeout(() => setSuccessMessage(null), 5000)
       } else {
-        setError('Database migration failed')
+        setError('Database migration failed - unexpected response format')
       }
     } catch (err: any) {
-      setError('Database migration failed: ' + err.message)
-      console.error('Migration error:', err)
+      console.error('Full migration error object:', err) // Debug log
+      
+      // Handle different error structures
+      let errorMessage = 'Database migration failed'
+      
+      if (err.response?.data?.detail) {
+        errorMessage += ': ' + err.response.data.detail
+      } else if (err.message) {
+        errorMessage += ': ' + err.message
+      } else if (typeof err === 'string') {
+        errorMessage += ': ' + err
+      }
+      
+      setError(errorMessage)
     } finally {
       setIsTesting(false)
     }
