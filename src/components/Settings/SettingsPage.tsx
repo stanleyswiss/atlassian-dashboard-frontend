@@ -90,9 +90,12 @@ export default function SettingsPage() {
     setError(null)
     
     try {
-      const response = await api.get('/api/settings/config')
-      if (response.data) {
-        setConfig(response.data)
+      const settingsData = await api.get('/api/settings/config')
+      console.log('Settings loaded from API:', settingsData) // Debug log
+      
+      if (settingsData) {
+        setConfig(settingsData)
+        console.log('Settings applied to form:', settingsData) // Debug log
       }
     } catch (err: any) {
       setError('Failed to load settings')
