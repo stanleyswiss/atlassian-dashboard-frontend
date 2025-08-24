@@ -16,7 +16,8 @@ import {
   Zap,
   Trash2,
   TrendingUp,
-  Cpu
+  Cpu,
+  Bot
 } from 'lucide-react'
 import LoadingSpinner from '@/components/Common/LoadingSpinner'
 import { ErrorMessage } from '@/components/Common/ErrorBoundary'
@@ -1158,6 +1159,28 @@ export default function SettingsPage() {
                 )}
                 <span>{analysisBatchRunning ? 'Processing...' : 'Continue Analysis'}</span>
               </button>
+              
+              <div className="bg-amber-50 border border-amber-200 rounded-md p-3">
+                <div className="flex items-center space-x-2 text-amber-800 text-sm mb-2">
+                  <AlertTriangle className="h-4 w-4" />
+                  <span className="font-medium">Replace Mock Data with Real OpenAI Analysis</span>
+                </div>
+                <p className="text-amber-700 text-xs mb-3">
+                  Your posts currently have mock/fake sentiment data. Use this to replace with real OpenAI analysis (will incur API costs).
+                </p>
+                <button
+                  onClick={analyzeAllPosts}
+                  disabled={isAnalyzing || analysisBatchRunning || scrapingStatus?.status === 'SCRAPING'}
+                  className="flex items-center space-x-2 px-4 py-2 bg-amber-600 text-white rounded-md hover:bg-amber-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors text-sm"
+                >
+                  {isAnalyzing ? (
+                    <RefreshCw className="h-4 w-4 animate-spin" />
+                  ) : (
+                    <Bot className="h-4 w-4" />
+                  )}
+                  <span>{isAnalyzing ? 'Replacing Mock Data...' : 'Replace with Real OpenAI Analysis'}</span>
+                </button>
+              </div>
               
               <button
                 onClick={handleFullDataCollection}
