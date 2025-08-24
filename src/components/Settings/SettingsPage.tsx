@@ -371,6 +371,42 @@ export default function SettingsPage() {
     }
   }
 
+  const checkOpenAIConfig = async () => {
+    setIsTesting(true)
+    
+    try {
+      const result = await api.get('/api/admin/openai-config-check')
+      
+      console.log('OpenAI Config Check:', result)
+      
+      if (result && result.success) {
+        const config = result.openai_config
+        
+        const hasApiKey = config.api_key_from_env || config.api_key_from_settings
+        const keyLength = Math.max(config.api_key_length_env, config.api_key_length_settings)
+        const visionEnabled = config.vision_analysis_enabled
+        
+        if (hasApiKey && visionEnabled) {
+          setSuccessMessage(`✅ OpenAI API Key configured! Length: ${keyLength} chars. Prefix: ${config.api_key_prefix}. Vision AI: ENABLED`)
+        } else if (hasApiKey && !visionEnabled) {
+          setSuccessMessage(`⚠️ OpenAI API Key found (${keyLength} chars) but Vision AI is DISABLED in settings. Check vision_analysis_enabled setting.`)
+        } else {
+          setError(`❌ No OpenAI API Key found! This is why you're getting fake sentiment data. Set OPENAI_API_KEY environment variable on Railway.`)
+        }
+        
+        console.log('Full OpenAI config details:', config)
+        setTimeout(() => setSuccessMessage(null), 15000)
+      } else {
+        setError(`OpenAI config check failed: ${result?.error || 'Unknown error'}`)
+      }
+    } catch (err: any) {
+      console.error('OpenAI config check error:', err)
+      setError('OpenAI config check failed: ' + (err.message || 'Unknown error'))
+    } finally {
+      setIsTesting(false)
+    }
+  }
+
   const handleFullDataCollection = async () => {
     setIsCollecting(true)
     
@@ -1026,6 +1062,19 @@ export default function SettingsPage() {
           
           <div className="flex items-center space-x-4">
             <div className="flex items-center space-x-4">
+              <button
+                onClick={checkOpenAIConfig}
+                disabled={isTesting}
+                className="flex items-center space-x-2 px-4 py-2 bg-red-600 text-white rounded-md hover:bg-red-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+              >
+                {isTesting ? (
+                  <RefreshCw className="h-4 w-4 animate-spin" />
+                ) : (
+                  <Shield className="h-4 w-4" />
+                )}
+                <span>Check OpenAI API Key</span>
+              </button>
+              
               <button
                 onClick={checkAIStatus}
                 disabled={isTesting}
