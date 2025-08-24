@@ -4,7 +4,7 @@ import { ApiErrorResponse } from '@/types'
 // API client configuration
 const API_CONFIG = {
   baseURL: import.meta.env.VITE_API_URL || 'http://localhost:8000',
-  timeout: 30000,
+  timeout: 120000, // Increased to 2 minutes for slow queries with JSON parsing
   headers: {
     'Content-Type': 'application/json',
   },

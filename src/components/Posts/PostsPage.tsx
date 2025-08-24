@@ -27,7 +27,7 @@ export default function PostsPage() {
   const [currentPage, setCurrentPage] = useState(1)
   const [totalPosts, setTotalPosts] = useState(0)
 
-  const POSTS_PER_PAGE = 20
+  const POSTS_PER_PAGE = 10 // Reduced from 20 to improve performance
 
   useEffect(() => {
     loadPosts()
@@ -65,9 +65,14 @@ export default function PostsPage() {
         setPosts(postsData)
       }
 
-      // Get stats for pagination
-      const stats = await postsService.getPostsStatistics()
-      setTotalPosts(stats.total_posts)
+      // Get stats for pagination (with fallback)
+      try {
+        const stats = await postsService.getPostsStatistics()
+        setTotalPosts(stats.total_posts)
+      } catch (statsError) {
+        console.warn('Failed to load posts statistics, using fallback:', statsError)
+        setTotalPosts(posts.length > 0 ? 100 : 0) // Fallback estimate
+      }
 
     } catch (err: any) {
       setError(err.message || 'Failed to load posts')
