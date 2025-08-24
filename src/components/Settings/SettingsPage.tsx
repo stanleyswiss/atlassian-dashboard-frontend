@@ -11,7 +11,11 @@ import {
   AlertTriangle,
   RefreshCw,
   Eye,
-  BarChart3
+  BarChart3,
+  Activity,
+  Zap,
+  Trash2,
+  TrendingUp
 } from 'lucide-react'
 import LoadingSpinner from '@/components/Common/LoadingSpinner'
 import { ErrorMessage } from '@/components/Common/ErrorBoundary'
@@ -61,9 +65,25 @@ export default function SettingsPage() {
     vision_ai: null
   })
 
+  const [scrapingStatus, setScrapingStatus] = useState<any>(null)
+  const [isLoadingStatus, setIsLoadingStatus] = useState(false)
+
   useEffect(() => {
     loadSettings()
+    loadScrapingStatus()
   }, [])
+
+  const loadScrapingStatus = async () => {
+    setIsLoadingStatus(true)
+    try {
+      const status = await api.get('/api/scraping/status')
+      setScrapingStatus(status)
+    } catch (err: any) {
+      console.error('Failed to load scraping status:', err)
+    } finally {
+      setIsLoadingStatus(false)
+    }
+  }
 
   const loadSettings = async () => {
     setIsLoading(true)
@@ -251,9 +271,12 @@ export default function SettingsPage() {
       
       if (result && result.success) {
         const message = result.message || 'Scraping triggered successfully'
-        const postsScraped = result.posts_scraped || 'Unknown'
-        setSuccessMessage(`${message} - Posts scraped: ${postsScraped}`)
+        const postsScraped = result.posts_scraped || 'In progress...'
+        setSuccessMessage(`${message} - Posts: ${postsScraped}`)
         setTimeout(() => setSuccessMessage(null), 8000)
+        
+        // Refresh status after a short delay
+        setTimeout(() => loadScrapingStatus(), 2000)
       } else {
         setError('Scraping failed or returned no data')
       }
@@ -261,6 +284,43 @@ export default function SettingsPage() {
       console.error('Scraping trigger error:', err)
       
       let errorMessage = 'Scraping trigger failed'
+      if (err.detail) {
+        errorMessage += ': ' + err.detail
+      } else if (err.message) {
+        errorMessage += ': ' + err.message
+      }
+      
+      setError(errorMessage)
+    } finally {
+      setIsTesting(false)
+    }
+  }
+
+  const triggerFreshStart = async () => {
+    setIsTesting(true)
+    
+    try {
+      const result = await api.post('/api/scraping/fresh-start', {}, {
+        timeout: 120000 // 2 minutes
+      })
+      
+      console.log('Fresh start result:', result)
+      
+      if (result && result.success) {
+        const message = result.message || 'Fresh start initiated'
+        const expectedPosts = result.expected_posts || '~150 posts'
+        setSuccessMessage(`${message} - Expected: ${expectedPosts}. Check back in 5 minutes!`)
+        setTimeout(() => setSuccessMessage(null), 10000)
+        
+        // Refresh status after delay
+        setTimeout(() => loadScrapingStatus(), 3000)
+      } else {
+        setError('Fresh start failed or returned no data')
+      }
+    } catch (err: any) {
+      console.error('Fresh start error:', err)
+      
+      let errorMessage = 'Fresh start failed'
       if (err.detail) {
         errorMessage += ': ' + err.detail
       } else if (err.message) {
@@ -364,6 +424,176 @@ export default function SettingsPage() {
         </div>
       </div>
 
+      {/* Scraping Status Dashboard */}
+      <div className="dashboard-card">
+        <div className="flex items-center justify-between mb-6">
+          <div className="flex items-center space-x-3">
+            <Activity className="w-5 h-5 text-green-600" />
+            <h3 className="text-lg font-semibold text-gray-900">Scraping Status</h3>
+          </div>
+          <div className="flex items-center space-x-3">
+            <button
+              onClick={loadScrapingStatus}
+              disabled={isLoadingStatus}
+              className="flex items-center space-x-2 px-3 py-1.5 bg-gray-100 text-gray-700 text-sm rounded-md hover:bg-gray-200 disabled:opacity-50 transition-colors"
+            >
+              <RefreshCw className={`h-4 w-4 ${isLoadingStatus ? 'animate-spin' : ''}`} />
+              <span>Refresh</span>
+            </button>
+            <button
+              onClick={triggerScraping}
+              disabled={isTesting}
+              className="flex items-center space-x-2 px-3 py-2 bg-green-600 text-white text-sm rounded-md hover:bg-green-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+            >
+              {isTesting ? (
+                <RefreshCw className="h-4 w-4 animate-spin" />
+              ) : (
+                <Zap className="h-4 w-4" />
+              )}
+              <span>Scrape More</span>
+            </button>
+            <button
+              onClick={triggerFreshStart}
+              disabled={isTesting}
+              className="flex items-center space-x-2 px-3 py-2 bg-blue-600 text-white text-sm rounded-md hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+            >
+              {isTesting ? (
+                <RefreshCw className="h-4 w-4 animate-spin" />
+              ) : (
+                <Trash2 className="h-4 w-4" />
+              )}
+              <span>Fresh Start</span>
+            </button>
+          </div>
+        </div>
+
+        {isLoadingStatus ? (
+          <LoadingSpinner size="medium" text="Loading scraping status..." />
+        ) : scrapingStatus ? (
+          <div className="space-y-4">
+            {/* Health Overview */}
+            <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+              <div className="bg-white border border-gray-200 rounded-lg p-4">
+                <div className="flex items-center justify-between">
+                  <div>
+                    <p className="text-sm font-medium text-gray-600">Status</p>
+                    <p className={`text-lg font-semibold ${
+                      scrapingStatus.scraping_health?.status === 'active' ? 'text-green-600' : 'text-gray-500'
+                    }`}>
+                      {scrapingStatus.scraping_health?.status?.toUpperCase() || 'UNKNOWN'}
+                    </p>
+                  </div>
+                  <Activity className={`w-8 h-8 ${
+                    scrapingStatus.scraping_health?.status === 'active' ? 'text-green-500' : 'text-gray-400'
+                  }`} />
+                </div>
+              </div>
+
+              <div className="bg-white border border-gray-200 rounded-lg p-4">
+                <div className="flex items-center justify-between">
+                  <div>
+                    <p className="text-sm font-medium text-gray-600">Total Posts</p>
+                    <p className="text-lg font-semibold text-blue-600">
+                      {scrapingStatus.database?.total_posts?.toLocaleString() || '0'}
+                    </p>
+                  </div>
+                  <Database className="w-8 h-8 text-blue-500" />
+                </div>
+              </div>
+
+              <div className="bg-white border border-gray-200 rounded-lg p-4">
+                <div className="flex items-center justify-between">
+                  <div>
+                    <p className="text-sm font-medium text-gray-600">Last 24h</p>
+                    <p className="text-lg font-semibold text-purple-600">
+                      {scrapingStatus.database?.posts_last_24h || '0'}
+                    </p>
+                  </div>
+                  <TrendingUp className="w-8 h-8 text-purple-500" />
+                </div>
+              </div>
+
+              <div className="bg-white border border-gray-200 rounded-lg p-4">
+                <div className="flex items-center justify-between">
+                  <div>
+                    <p className="text-sm font-medium text-gray-600">Health Score</p>
+                    <p className={`text-lg font-semibold ${
+                      (scrapingStatus.scraping_health?.health_score || 0) > 70 ? 'text-green-600' :
+                      (scrapingStatus.scraping_health?.health_score || 0) > 40 ? 'text-yellow-600' : 'text-red-600'
+                    }`}>
+                      {scrapingStatus.scraping_health?.health_score || 0}%
+                    </p>
+                  </div>
+                  <CheckCircle2 className={`w-8 h-8 ${
+                    (scrapingStatus.scraping_health?.health_score || 0) > 70 ? 'text-green-500' :
+                    (scrapingStatus.scraping_health?.health_score || 0) > 40 ? 'text-yellow-500' : 'text-red-500'
+                  }`} />
+                </div>
+              </div>
+            </div>
+
+            {/* Last Activity & Forum Breakdown */}
+            <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
+              <div className="bg-gray-50 rounded-lg p-4">
+                <h4 className="font-medium text-gray-900 mb-3">Last Activity</h4>
+                <div className="space-y-2">
+                  <div className="flex justify-between text-sm">
+                    <span className="text-gray-600">Last Post:</span>
+                    <span className="font-medium text-gray-900">
+                      {scrapingStatus.scraping_health?.last_activity_ago || 'Unknown'}
+                    </span>
+                  </div>
+                  <div className="flex justify-between text-sm">
+                    <span className="text-gray-600">Posts Last Hour:</span>
+                    <span className="font-medium text-gray-900">
+                      {scrapingStatus.database?.posts_last_hour || 0}
+                    </span>
+                  </div>
+                  <div className="flex justify-between text-sm">
+                    <span className="text-gray-600">Most Active Forum:</span>
+                    <span className="font-medium text-gray-900 capitalize">
+                      {scrapingStatus.forums?.most_active_forum || 'None'}
+                    </span>
+                  </div>
+                </div>
+              </div>
+
+              <div className="bg-gray-50 rounded-lg p-4">
+                <h4 className="font-medium text-gray-900 mb-3">Forum Breakdown (24h)</h4>
+                <div className="space-y-2">
+                  {Object.entries(scrapingStatus.database?.forum_breakdown_24h || {}).map(([forum, count]) => (
+                    <div key={forum} className="flex justify-between text-sm">
+                      <span className="text-gray-600 capitalize">{forum}:</span>
+                      <span className="font-medium text-gray-900">{count as number}</span>
+                    </div>
+                  ))}
+                  {Object.keys(scrapingStatus.database?.forum_breakdown_24h || {}).length === 0 && (
+                    <p className="text-sm text-gray-500">No recent activity</p>
+                  )}
+                </div>
+              </div>
+            </div>
+
+            {/* Recommendations */}
+            {scrapingStatus.recommendations && scrapingStatus.recommendations.length > 0 && (
+              <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
+                <h4 className="font-medium text-blue-900 mb-2">Recommendations</h4>
+                <ul className="space-y-1">
+                  {scrapingStatus.recommendations.map((rec: string, index: number) => (
+                    <li key={index} className="text-sm text-blue-800">• {rec}</li>
+                  ))}
+                </ul>
+              </div>
+            )}
+          </div>
+        ) : (
+          <div className="text-center py-8">
+            <Activity className="w-12 h-12 text-gray-400 mx-auto mb-3" />
+            <p className="text-gray-600">Click refresh to load scraping status</p>
+          </div>
+        )}
+      </div>
+
       {/* System Tests */}
       <div className="dashboard-card">
         <div className="flex items-center justify-between mb-6">
@@ -371,18 +601,6 @@ export default function SettingsPage() {
             <TestTube className="w-5 h-5 text-purple-600" />
             <h3 className="text-lg font-semibold text-gray-900">System Tests</h3>
           </div>
-          <button
-            onClick={triggerScraping}
-            disabled={isTesting}
-            className="flex items-center space-x-2 px-3 py-2 bg-green-600 text-white text-sm rounded-md hover:bg-green-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
-          >
-            {isTesting ? (
-              <RefreshCw className="h-4 w-4 animate-spin" />
-            ) : (
-              <RefreshCw className="h-4 w-4" />
-            )}
-            <span>Scrape on Demand</span>
-          </button>
         </div>
         
         <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
