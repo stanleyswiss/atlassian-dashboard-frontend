@@ -68,6 +68,8 @@ export default function SettingsPage() {
 
   const [scrapingStatus, setScrapingStatus] = useState<any>(null)
   const [isLoadingStatus, setIsLoadingStatus] = useState(false)
+  const [isAnalyzing, setIsAnalyzing] = useState(false)
+  const [isCollecting, setIsCollecting] = useState(false)
 
   useEffect(() => {
     loadSettings()
@@ -368,8 +370,50 @@ export default function SettingsPage() {
     }
   }
 
+  const handleFullDataCollection = async () => {
+    setIsCollecting(true)
+    
+    try {
+      // Use dashboard service for full data collection
+      const { dashboardService } = await import('@/services')
+      
+      const result = await dashboardService.fullDataCollection({
+        max_posts_per_category: 50, // More posts for comprehensive collection
+        analyze_with_ai: true
+      })
+      
+      console.log('Full data collection result:', result)
+      
+      if (result) {
+        setSuccessMessage(`Full data collection completed! Collected fresh data with AI analysis. Check your dashboard now!`)
+        setTimeout(() => setSuccessMessage(null), 15000)
+        
+        // Refresh status after completion
+        setTimeout(() => {
+          loadScrapingStatus()
+          checkAIStatus()
+        }, 3000)
+      } else {
+        setError('Full data collection completed but returned no result data')
+      }
+    } catch (err: any) {
+      console.error('Full data collection error:', err)
+      
+      let errorMessage = 'Full data collection failed'
+      if (err.detail) {
+        errorMessage += ': ' + err.detail
+      } else if (err.message) {
+        errorMessage += ': ' + err.message
+      }
+      
+      setError(errorMessage)
+    } finally {
+      setIsCollecting(false)
+    }
+  }
+
   const analyzeAllPosts = async () => {
-    setIsTesting(true)
+    setIsAnalyzing(true)
     
     try {
       const result = await api.post('/api/admin/analyze-all-posts', {}, {
@@ -403,7 +447,7 @@ export default function SettingsPage() {
       
       setError(errorMessage)
     } finally {
-      setIsTesting(false)
+      setIsAnalyzing(false)
     }
   }
 
@@ -930,20 +974,33 @@ export default function SettingsPage() {
               
               <button
                 onClick={analyzeAllPosts}
-                disabled={isTesting}
+                disabled={isAnalyzing || scrapingStatus?.status === 'SCRAPING'}
                 className="flex items-center space-x-2 px-4 py-2 bg-green-600 text-white rounded-md hover:bg-green-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
               >
-                {isTesting ? (
+                {isAnalyzing ? (
                   <RefreshCw className="h-4 w-4 animate-spin" />
                 ) : (
                   <Cpu className="h-4 w-4" />
                 )}
-                <span>Analyze All Posts with AI</span>
+                <span>{isAnalyzing ? 'Analyzing Posts...' : 'Analyze All Posts with AI'}</span>
+              </button>
+              
+              <button
+                onClick={handleFullDataCollection}
+                disabled={isCollecting || scrapingStatus?.status === 'SCRAPING'}
+                className="flex items-center space-x-2 px-4 py-2 bg-purple-600 text-white rounded-md hover:bg-purple-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+              >
+                {isCollecting ? (
+                  <RefreshCw className="h-4 w-4 animate-spin" />
+                ) : (
+                  <Database className="h-4 w-4" />
+                )}
+                <span>{isCollecting ? 'Collecting Data...' : 'Full Data Collection + AI'}</span>
               </button>
             </div>
             
             <div className="text-sm text-gray-600">
-              Check AI status and run analysis on all existing posts to fix 0% coverage
+              Check AI status, analyze existing posts, or run full data collection with scraping + AI analysis
             </div>
           </div>
         </div>

@@ -15,13 +15,17 @@ interface LayoutProps {
 export default function Layout({ children, currentPage, onNavigate }: LayoutProps) {
   const [isRefreshing, setIsRefreshing] = useState(false)
   const [lastRefreshTime, setLastRefreshTime] = useState<Date | null>(null)
+  const [refreshType, setRefreshType] = useState<'light' | 'full'>('light')
 
-  const handleRefresh = async () => {
+  const handleRefresh = async (fullScrape = false) => {
     setIsRefreshing(true)
+    setRefreshType(fullScrape ? 'full' : 'light')
+    
     try {
       await dashboardService.refreshData({
         max_posts_per_category: 20,
-        analyze_with_ai: true
+        analyze_with_ai: fullScrape, // Only use AI for full scrapes
+        full_scrape: fullScrape
       })
       setLastRefreshTime(new Date())
     } catch (error) {
@@ -31,11 +35,11 @@ export default function Layout({ children, currentPage, onNavigate }: LayoutProp
     }
   }
 
-  // Auto-refresh every 15 minutes
+  // Auto-refresh every 15 minutes (lightweight only)
   useEffect(() => {
     const interval = setInterval(() => {
       if (!isRefreshing) {
-        handleRefresh()
+        handleRefresh(false) // Always use lightweight for auto-refresh
       }
     }, 15 * 60 * 1000) // 15 minutes
 
@@ -46,7 +50,7 @@ export default function Layout({ children, currentPage, onNavigate }: LayoutProp
     <div className="min-h-screen bg-gray-50 flex flex-col">
       {/* Header */}
       <Header 
-        onRefresh={handleRefresh} 
+        onRefresh={() => handleRefresh(false)} 
         isRefreshing={isRefreshing}
         onNavigate={onNavigate}
       />
@@ -84,7 +88,9 @@ export default function Layout({ children, currentPage, onNavigate }: LayoutProp
                   {isRefreshing && (
                     <div className="flex items-center space-x-2 text-sm text-blue-600">
                       <LoadingSpinner size="small" />
-                      <span>Refreshing data...</span>
+                      <span>
+                        {refreshType === 'full' ? 'Full data collection...' : 'Refreshing dashboard...'}
+                      </span>
                     </div>
                   )}
                 </div>

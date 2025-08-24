@@ -71,12 +71,13 @@ class DashboardService {
   }
 
   // Trigger manual data collection and refresh
-  async refreshData(params: RefreshDataRequest = {}): Promise<RefreshDataResponse> {
-    const { max_posts_per_category = 20, analyze_with_ai = false } = params
+  async refreshData(params: RefreshDataRequest & { full_scrape?: boolean } = {}): Promise<RefreshDataResponse> {
+    const { max_posts_per_category = 20, analyze_with_ai = false, full_scrape = false } = params
     
     const requestData = {
       max_posts_per_category,
-      analyze_with_ai
+      analyze_with_ai,
+      full_scrape
     }
 
     // Clear relevant caches after refresh
@@ -86,6 +87,11 @@ class DashboardService {
     this.clearCache()
     
     return response
+  }
+
+  // Full data collection (heavy operation)
+  async fullDataCollection(params: RefreshDataRequest = {}): Promise<RefreshDataResponse> {
+    return this.refreshData({ ...params, full_scrape: true })
   }
 
   // Get detailed community health score
