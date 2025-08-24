@@ -193,6 +193,26 @@ export default function SettingsPage() {
     }
   }
 
+  const migrateDatabase = async () => {
+    setIsTesting(true)
+    
+    try {
+      const result = await api.post('/api/admin/migrate-database')
+      
+      if (result.data.success) {
+        setSuccessMessage(`Database migration successful! Added: ${result.data.added_columns.join(', ')}`)
+        setTimeout(() => setSuccessMessage(null), 5000)
+      } else {
+        setError('Database migration failed')
+      }
+    } catch (err: any) {
+      setError('Database migration failed: ' + err.message)
+      console.error('Migration error:', err)
+    } finally {
+      setIsTesting(false)
+    }
+  }
+
   const getTestIcon = (result: TestResult | null) => {
     if (!result) return <TestTube className="w-4 h-4 text-gray-400" />
     if (result.success) return <CheckCircle2 className="w-4 h-4 text-green-600" />
@@ -286,9 +306,23 @@ export default function SettingsPage() {
 
       {/* System Tests */}
       <div className="dashboard-card">
-        <div className="flex items-center space-x-3 mb-6">
-          <TestTube className="w-5 h-5 text-purple-600" />
-          <h3 className="text-lg font-semibold text-gray-900">System Tests</h3>
+        <div className="flex items-center justify-between mb-6">
+          <div className="flex items-center space-x-3">
+            <TestTube className="w-5 h-5 text-purple-600" />
+            <h3 className="text-lg font-semibold text-gray-900">System Tests</h3>
+          </div>
+          <button
+            onClick={migrateDatabase}
+            disabled={isTesting}
+            className="flex items-center space-x-2 px-3 py-2 bg-orange-600 text-white text-sm rounded-md hover:bg-orange-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+          >
+            {isTesting ? (
+              <RefreshCw className="h-4 w-4 animate-spin" />
+            ) : (
+              <Database className="h-4 w-4" />
+            )}
+            <span>Migrate DB</span>
+          </button>
         </div>
         
         <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
