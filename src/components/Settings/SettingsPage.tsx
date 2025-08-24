@@ -407,6 +407,38 @@ export default function SettingsPage() {
     }
   }
 
+  const testOpenAICall = async () => {
+    setIsTesting(true)
+    
+    try {
+      const result = await api.post('/api/admin/test-openai-call', {}, {
+        timeout: 30000 // 30 second timeout for single API call
+      })
+      
+      console.log('OpenAI API Test Result:', result)
+      
+      if (result && result.success) {
+        const testResult = result.test_result
+        
+        if (testResult.result_type === 'real_api') {
+          setSuccessMessage(`🎉 SUCCESS! Real OpenAI API call made! Response keys: ${testResult.api_response_keys.join(', ')}. This proves API is working - the issue is elsewhere.`)
+        } else {
+          setError(`❌ FAILED: Still using mock analysis. Has mock flag: ${testResult.has_mock_flag}. Check Railway logs for detailed error messages.`)
+        }
+        
+        console.log('Full OpenAI test details:', result.full_result)
+        setTimeout(() => setSuccessMessage(null), 20000)
+      } else {
+        setError(`OpenAI API test failed: ${result?.error || 'Unknown error'}`)
+      }
+    } catch (err: any) {
+      console.error('OpenAI API test error:', err)
+      setError('OpenAI API test failed: ' + (err.message || 'Network timeout/error'))
+    } finally {
+      setIsTesting(false)
+    }
+  }
+
   const handleFullDataCollection = async () => {
     setIsCollecting(true)
     
@@ -1073,6 +1105,19 @@ export default function SettingsPage() {
                   <Shield className="h-4 w-4" />
                 )}
                 <span>Check OpenAI API Key</span>
+              </button>
+              
+              <button
+                onClick={testOpenAICall}
+                disabled={isTesting}
+                className="flex items-center space-x-2 px-4 py-2 bg-orange-600 text-white rounded-md hover:bg-orange-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+              >
+                {isTesting ? (
+                  <RefreshCw className="h-4 w-4 animate-spin" />
+                ) : (
+                  <TestTube className="h-4 w-4" />
+                )}
+                <span>Test Real OpenAI Call</span>
               </button>
               
               <button
