@@ -28,9 +28,12 @@ export default function ForumsPage() {
     setError(null)
 
     try {
+      console.log('🔍 Frontend: Calling forumsService.getForumsOverview with timeframe:', selectedTimeframe)
       const response = await forumsService.getForumsOverview(selectedTimeframe)
+      console.log('✅ Frontend: Forums API response:', response)
       setForumsData(response)
     } catch (err: any) {
+      console.error('❌ Frontend: Forums API error:', err)
       setError(err.message || 'Failed to load forums data')
     } finally {
       setIsLoading(false)
