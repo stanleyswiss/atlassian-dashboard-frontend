@@ -31,8 +31,8 @@ export const forumsService = {
    * Get forum overview statistics
    */
   async getForumsOverview(days: number = 7): Promise<ForumsResponse> {
-    const response = await api.get(`/api/forums/overview?days=${days}`)
-    return response.data
+    const data = await api.get<ForumsResponse>(`/api/forums/overview?days=${days}`)
+    return data
   },
 
   /**

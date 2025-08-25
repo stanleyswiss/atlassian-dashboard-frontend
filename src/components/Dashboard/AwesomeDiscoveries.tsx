@@ -29,12 +29,12 @@ export default function AwesomeDiscoveries() {
     setError(null)
     
     try {
-      const response = await api.get('/api/business-intelligence/awesome-discoveries')
-      console.log('Awesome Discoveries API Response:', response) // Debug log
+      const data = await api.get<AwesomeDiscovery[]>('/api/business-intelligence/awesome-discoveries')
+      console.log('Awesome Discoveries API Response:', data) // Debug log
       
-      // Ensure response.data is an array
-      const data = Array.isArray(response.data) ? response.data : []
-      setDiscoveries(data)
+      // Ensure data is an array
+      const discoveries = Array.isArray(data) ? data : []
+      setDiscoveries(discoveries)
     } catch (err: any) {
       console.error('Failed to load awesome discoveries:', err)
       setError('Failed to load discoveries')

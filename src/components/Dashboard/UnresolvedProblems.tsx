@@ -31,12 +31,12 @@ export default function UnresolvedProblems() {
     setError(null)
     
     try {
-      const response = await api.get('/api/business-intelligence/unresolved-problems?days=14')
-      console.log('Unresolved Problems API Response:', response) // Debug log
+      const data = await api.get<UnresolvedProblem[]>('/api/business-intelligence/unresolved-problems?days=14')
+      console.log('Unresolved Problems API Response:', data) // Debug log
       
-      // Ensure response.data is an array
-      const data = Array.isArray(response.data) ? response.data : []
-      setProblems(data)
+      // Ensure data is an array
+      const problems = Array.isArray(data) ? data : []
+      setProblems(problems)
     } catch (err: any) {
       console.error('Failed to load unresolved problems:', err)
       setError('Failed to load problems')

@@ -31,12 +31,12 @@ export default function TrendingSolutions() {
     setError(null)
     
     try {
-      const response = await api.get('/api/business-intelligence/trending-solutions')
-      console.log('Trending Solutions API Response:', response) // Debug log
+      const data = await api.get<TrendingSolution[]>('/api/business-intelligence/trending-solutions')
+      console.log('Trending Solutions API Response:', data) // Debug log
       
-      // Ensure response.data is an array
-      const data = Array.isArray(response.data) ? response.data : []
-      setSolutions(data)
+      // Ensure data is an array
+      const solutions = Array.isArray(data) ? data : []
+      setSolutions(solutions)
     } catch (err: any) {
       console.error('Failed to load trending solutions:', err)
       setError('Failed to load solutions')

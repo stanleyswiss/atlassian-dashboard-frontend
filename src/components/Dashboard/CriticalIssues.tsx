@@ -34,12 +34,12 @@ export default function CriticalIssues() {
     setError(null)
     
     try {
-      const response = await api.get(`/api/business-intelligence/critical-issues?days=${timeFrame}`)
-      console.log('Critical Issues API Response:', response) // Debug log
+      const data = await api.get<CriticalIssue[]>(`/api/business-intelligence/critical-issues?days=${timeFrame}`)
+      console.log('Critical Issues API Response:', data) // Debug log
       
-      // Ensure response.data is an array
-      const data = Array.isArray(response.data) ? response.data : []
-      setIssues(data)
+      // Ensure data is an array
+      const issues = Array.isArray(data) ? data : []
+      setIssues(issues)
     } catch (err: any) {
       console.error('Failed to load critical issues:', err)
       setError('Failed to load critical issues')
