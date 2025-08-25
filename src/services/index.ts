@@ -11,6 +11,7 @@ import analyticsServiceInstance from './analytics'
 export { dashboardService, default as defaultDashboardService } from './dashboard'
 export { postsService, default as defaultPostsService } from './posts'
 export { analyticsService, default as defaultAnalyticsService } from './analytics'
+export { forumsService } from './forums'
 
 // Individual service exports with utilities
 export * from './dashboard'

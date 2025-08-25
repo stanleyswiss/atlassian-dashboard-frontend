@@ -1,41 +1,23 @@
 import { useState, useEffect } from 'react'
 import { 
-  BarChart, 
   Users, 
   MessageCircle, 
   TrendingUp,
-  Clock,
   Activity,
-  Target,
   RefreshCw,
-  ExternalLink
+  ExternalLink,
+  CheckCircle,
+  AlertCircle
 } from 'lucide-react'
-import { Post, PostCategory } from '@/types'
-import { postsService, dashboardService } from '@/services'
+import { forumsService, type ForumOverview, type ForumsResponse } from '@/services'
 import LoadingSpinner from '@/components/Common/LoadingSpinner'
 import { ErrorMessage } from '@/components/Common/ErrorBoundary'
-import { BarChart as RechartsBarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, PieChart, Pie, Cell } from 'recharts'
-
-interface ForumStats {
-  category: PostCategory
-  name: string
-  description: string
-  total_posts: number
-  posts_today: number
-  posts_week: number
-  unique_authors: number
-  avg_sentiment: number
-  top_topics: string[]
-  activity_trend: number
-  url: string
-}
 
 export default function ForumsPage() {
-  const [forumStats, setForumStats] = useState<ForumStats[]>([])
-  const [posts, setPosts] = useState<Post[]>([])
+  const [forumsData, setForumsData] = useState<ForumsResponse | null>(null)
   const [isLoading, setIsLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
-  const [selectedTimeframe, setSelectedTimeframe] = useState<'today' | 'week' | 'month'>('week')
+  const [selectedTimeframe, setSelectedTimeframe] = useState<7 | 14 | 30>(7)
 
   useEffect(() => {
     loadForumData()
@@ -46,151 +28,32 @@ export default function ForumsPage() {
     setError(null)
 
     try {
-      // Get all posts for analysis
-      const allPosts = await postsService.getPosts({ limit: 200 })
-      setPosts(allPosts)
-
-      // Get dashboard overview for additional stats
-      const overview = await dashboardService.getOverview()
-
-      // Calculate forum statistics
-      const forumCategories: PostCategory[] = ['jira', 'jsm', 'confluence', 'rovo', 'announcements']
-      const stats: ForumStats[] = []
-
-      for (const category of forumCategories) {
-        const categoryPosts = allPosts.filter(post => post.category === category)
-        
-        // Time-based filtering
-        const now = new Date()
-        const today = new Date(now.getFullYear(), now.getMonth(), now.getDate())
-        const weekAgo = new Date(today.getTime() - 7 * 24 * 60 * 60 * 1000)
-        
-        const postsToday = categoryPosts.filter(post => 
-          post.created_at && new Date(post.created_at) >= today
-        )
-        const postsWeek = categoryPosts.filter(post => 
-          post.created_at && new Date(post.created_at) >= weekAgo
-        )
-
-        // Calculate sentiment
-        const sentimentPosts = categoryPosts.filter(post => post.sentiment_score !== null)
-        const avgSentiment = sentimentPosts.length > 0 
-          ? sentimentPosts.reduce((sum, post) => sum + (post.sentiment_score || 0), 0) / sentimentPosts.length
-          : 0
-
-        // Get unique authors
-        const uniqueAuthors = new Set(categoryPosts.map(post => post.author)).size
-
-        // Extract common topics (simple keyword analysis)
-        const topTopics = extractTopTopics(categoryPosts)
-
-        // Calculate activity trend (mock for now)
-        const activityTrend = Math.random() * 40 - 20 // Random between -20% and +20%
-
-        stats.push({
-          category,
-          name: getForumName(category),
-          description: getForumDescription(category),
-          total_posts: categoryPosts.length,
-          posts_today: postsToday.length,
-          posts_week: postsWeek.length,
-          unique_authors: uniqueAuthors,
-          avg_sentiment: avgSentiment,
-          top_topics: topTopics,
-          activity_trend: activityTrend,
-          url: getForumUrl(category)
-        })
-      }
-
-      setForumStats(stats.sort((a, b) => b.total_posts - a.total_posts))
-
+      const response = await forumsService.getForumsOverview(selectedTimeframe)
+      setForumsData(response)
     } catch (err: any) {
-      setError(err.message || 'Failed to load forum data')
+      setError(err.message || 'Failed to load forums data')
     } finally {
       setIsLoading(false)
     }
   }
 
-  const extractTopTopics = (posts: Post[]): string[] => {
-    // Simple topic extraction from titles
-    const commonWords = new Map<string, number>()
-    
-    posts.forEach(post => {
-      if (post.title) {
-        const words = post.title.toLowerCase()
-          .replace(/[^\w\s]/g, '')
-          .split(/\s+/)
-          .filter(word => 
-            word.length > 3 && 
-            !['with', 'after', 'before', 'when', 'where', 'what', 'how'].includes(word)
-          )
-        
-        words.forEach(word => {
-          commonWords.set(word, (commonWords.get(word) || 0) + 1)
-        })
-      }
-    })
-
-    return Array.from(commonWords.entries())
-      .sort((a, b) => b[1] - a[1])
-      .slice(0, 5)
-      .map(([word]) => word)
+  const getHealthColor = (score: number) => {
+    if (score >= 80) return 'text-green-600 bg-green-100'
+    if (score >= 60) return 'text-yellow-600 bg-yellow-100'
+    return 'text-red-600 bg-red-100'
   }
 
-  const getForumName = (category: PostCategory): string => {
-    const names = {
-      jira: 'Jira',
-      jsm: 'Jira Service Management',
-      confluence: 'Confluence',
-      rovo: 'Rovo',
-      announcements: 'Announcements'
-    }
-    return names[category]
-  }
-
-  const getForumDescription = (category: PostCategory): string => {
-    const descriptions = {
-      jira: 'Project tracking and agile development',
-      jsm: 'IT service management and support',
-      confluence: 'Team collaboration and documentation',
-      rovo: 'AI-powered search and insights',
-      announcements: 'Product updates and news'
-    }
-    return descriptions[category]
-  }
-
-  const getForumUrl = (category: PostCategory): string => {
-    const urls = {
-      jira: 'https://community.atlassian.com/c/jira/5',
-      jsm: 'https://community.atlassian.com/c/jira-service-desk/10',
-      confluence: 'https://community.atlassian.com/c/confluence/6',
-      rovo: 'https://community.atlassian.com/c/rovo/73',
-      announcements: 'https://community.atlassian.com/c/announcements/19'
-    }
-    return urls[category]
-  }
-
-  const getSentimentColor = (sentiment: number): string => {
-    if (sentiment > 0.1) return 'text-green-600'
-    if (sentiment < -0.1) return 'text-red-600'
-    return 'text-gray-600'
-  }
-
-  const getSentimentBadge = (sentiment: number): string => {
-    if (sentiment > 0.1) return 'bg-green-100 text-green-800'
-    if (sentiment < -0.1) return 'bg-red-100 text-red-800'
-    return 'bg-gray-100 text-gray-800'
-  }
-
-  const handleRefresh = () => {
-    loadForumData()
+  const getHealthLabel = (score: number) => {
+    if (score >= 80) return 'Excellent'
+    if (score >= 60) return 'Good'
+    return 'Needs Attention'
   }
 
   if (isLoading) {
     return (
       <div className="space-y-6">
         <div className="dashboard-card">
-          <LoadingSpinner size="large" text="Loading forum statistics..." />
+          <LoadingSpinner size="large" text="Loading forums data..." />
         </div>
       </div>
     )
@@ -199,47 +62,51 @@ export default function ForumsPage() {
   if (error) {
     return (
       <div className="space-y-6">
-        <ErrorMessage error={error} onRetry={handleRefresh} />
+        <ErrorMessage error={error} onRetry={loadForumData} />
       </div>
     )
   }
 
-  // Prepare chart data
-  const chartData = forumStats.map(forum => ({
-    name: forum.name.split(' ')[0], // Short name for charts
-    posts: selectedTimeframe === 'today' ? forum.posts_today : 
-           selectedTimeframe === 'week' ? forum.posts_week : forum.total_posts,
-    sentiment: forum.avg_sentiment * 100,
-    authors: forum.unique_authors
-  }))
+  if (!forumsData?.forums) {
+    return (
+      <div className="space-y-6">
+        <div className="dashboard-card text-center py-12">
+          <MessageCircle className="h-12 w-12 text-gray-400 mx-auto mb-4" />
+          <h3 className="text-lg font-medium text-gray-900 mb-2">No Forums Data</h3>
+          <p className="text-gray-600">Unable to load forums information.</p>
+        </div>
+      </div>
+    )
+  }
 
-  const pieColors = ['#8B5CF6', '#3B82F6', '#10B981', '#F59E0B', '#EF4444']
+  const forums = Object.entries(forumsData.forums)
 
   return (
     <div className="space-y-6">
       {/* Header */}
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-2xl font-bold text-gray-900">Forum Comparison</h1>
+          <h1 className="text-2xl font-bold text-gray-900">Community Forums</h1>
           <p className="text-gray-600 mt-1">
-            Compare activity and engagement across all Atlassian community forums
+            Overview of Atlassian Community forum activity and health metrics
           </p>
         </div>
         
         <div className="flex items-center space-x-3">
           <select
             value={selectedTimeframe}
-            onChange={(e) => setSelectedTimeframe(e.target.value as 'today' | 'week' | 'month')}
+            onChange={(e) => setSelectedTimeframe(Number(e.target.value) as 7 | 14 | 30)}
             className="border border-gray-300 rounded-md px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500"
           >
-            <option value="today">Today</option>
-            <option value="week">This Week</option>
-            <option value="month">All Time</option>
+            <option value={7}>Last 7 days</option>
+            <option value={14}>Last 14 days</option>
+            <option value={30}>Last 30 days</option>
           </select>
+          
           <button
-            onClick={handleRefresh}
+            onClick={loadForumData}
             disabled={isLoading}
-            className="flex items-center space-x-2 px-3 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 disabled:opacity-50 transition-colors text-sm"
+            className="flex items-center space-x-2 px-3 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 disabled:opacity-50 transition-colors"
           >
             <RefreshCw className={`h-4 w-4 ${isLoading ? 'animate-spin' : ''}`} />
             <span>Refresh</span>
@@ -247,202 +114,139 @@ export default function ForumsPage() {
         </div>
       </div>
 
-      {/* Overview Stats */}
+      {/* Summary Stats */}
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
         <div className="dashboard-card">
           <div className="flex items-center">
-            <div className="p-2 bg-blue-50 rounded-lg">
-              <MessageCircle className="h-6 w-6 text-blue-600" />
-            </div>
-            <div className="ml-4">
+            <MessageCircle className="h-8 w-8 text-blue-600 mr-3" />
+            <div>
               <p className="text-sm font-medium text-gray-600">Total Posts</p>
-              <p className="text-2xl font-bold text-gray-900">
-                {forumStats.reduce((sum, forum) => sum + 
-                  (selectedTimeframe === 'today' ? forum.posts_today : 
-                   selectedTimeframe === 'week' ? forum.posts_week : forum.total_posts), 0
-                )}
-              </p>
+              <p className="text-2xl font-bold text-gray-900">{forumsData.total_posts}</p>
             </div>
           </div>
         </div>
-
-        <div className="dashboard-card">
-          <div className="flex items-center">
-            <div className="p-2 bg-green-50 rounded-lg">
-              <Users className="h-6 w-6 text-green-600" />
-            </div>
-            <div className="ml-4">
-              <p className="text-sm font-medium text-gray-600">Active Authors</p>
-              <p className="text-2xl font-bold text-gray-900">
-                {forumStats.reduce((sum, forum) => sum + forum.unique_authors, 0)}
-              </p>
-            </div>
-          </div>
-        </div>
-
-        <div className="dashboard-card">
-          <div className="flex items-center">
-            <div className="p-2 bg-purple-50 rounded-lg">
-              <BarChart className="h-6 w-6 text-purple-600" />
-            </div>
-            <div className="ml-4">
-              <p className="text-sm font-medium text-gray-600">Most Active</p>
-              <p className="text-2xl font-bold text-gray-900">
-                {forumStats.length > 0 ? forumStats[0].name.split(' ')[0] : 'N/A'}
-              </p>
-            </div>
-          </div>
-        </div>
-
-        <div className="dashboard-card">
-          <div className="flex items-center">
-            <div className="p-2 bg-yellow-50 rounded-lg">
-              <TrendingUp className="h-6 w-6 text-yellow-600" />
-            </div>
-            <div className="ml-4">
-              <p className="text-sm font-medium text-gray-600">Avg Sentiment</p>
-              <p className={`text-2xl font-bold ${getSentimentColor(
-                forumStats.length > 0 ? forumStats.reduce((sum, forum) => sum + forum.avg_sentiment, 0) / forumStats.length : 0
-              )}`}>
-                {forumStats.length > 0 
-                  ? `${((forumStats.reduce((sum, forum) => sum + forum.avg_sentiment, 0) / forumStats.length) * 100).toFixed(0)}%`
-                  : '0%'
-                }
-              </p>
-            </div>
-          </div>
-        </div>
-      </div>
-
-      {/* Charts */}
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-        {/* Posts by Forum */}
-        <div className="dashboard-card">
-          <h3 className="text-lg font-semibold text-gray-900 mb-4">
-            Posts by Forum ({selectedTimeframe === 'today' ? 'Today' : selectedTimeframe === 'week' ? 'This Week' : 'All Time'})
-          </h3>
-          <div className="h-64">
-            <ResponsiveContainer width="100%" height="100%">
-              <RechartsBarChart data={chartData}>
-                <CartesianGrid strokeDasharray="3 3" />
-                <XAxis dataKey="name" />
-                <YAxis />
-                <Tooltip />
-                <Bar dataKey="posts" fill="#8B5CF6" />
-              </RechartsBarChart>
-            </ResponsiveContainer>
-          </div>
-        </div>
-
-        {/* Forum Distribution */}
-        <div className="dashboard-card">
-          <h3 className="text-lg font-semibold text-gray-900 mb-4">Forum Post Distribution</h3>
-          <div className="h-64">
-            <ResponsiveContainer width="100%" height="100%">
-              <PieChart>
-                <Pie
-                  data={chartData}
-                  cx="50%"
-                  cy="50%"
-                  outerRadius={80}
-                  fill="#8884d8"
-                  dataKey="posts"
-                  label={(entry) => `${entry.name}: ${entry.posts}`}
-                >
-                  {chartData.map((entry, index) => (
-                    <Cell key={`cell-${index}`} fill={pieColors[index % pieColors.length]} />
-                  ))}
-                </Pie>
-                <Tooltip />
-              </PieChart>
-            </ResponsiveContainer>
-          </div>
-        </div>
-      </div>
-
-      {/* Forum Details */}
-      <div className="space-y-4">
-        <h3 className="text-lg font-semibold text-gray-900">Forum Details</h3>
         
-        <div className="grid grid-cols-1 gap-4">
-          {forumStats.map((forum, index) => (
-            <div key={forum.category} className="dashboard-card">
-              <div className="flex items-start justify-between">
-                <div className="flex-1">
-                  <div className="flex items-center space-x-3 mb-2">
-                    <div className={`p-2 rounded-lg`} style={{backgroundColor: `${pieColors[index]}20`}}>
-                      <BarChart className="h-5 w-5" style={{color: pieColors[index]}} />
-                    </div>
-                    <div>
-                      <h4 className="text-lg font-semibold text-gray-900">{forum.name}</h4>
-                      <p className="text-sm text-gray-600">{forum.description}</p>
-                    </div>
-                  </div>
+        <div className="dashboard-card">
+          <div className="flex items-center">
+            <CheckCircle className="h-8 w-8 text-green-600 mr-3" />
+            <div>
+              <p className="text-sm font-medium text-gray-600">Solved Posts</p>
+              <p className="text-2xl font-bold text-gray-900">{forumsData.total_solved}</p>
+            </div>
+          </div>
+        </div>
+        
+        <div className="dashboard-card">
+          <div className="flex items-center">
+            <AlertCircle className="h-8 w-8 text-red-600 mr-3" />
+            <div>
+              <p className="text-sm font-medium text-gray-600">Critical Issues</p>
+              <p className="text-2xl font-bold text-gray-900">{forumsData.total_critical}</p>
+            </div>
+          </div>
+        </div>
+        
+        <div className="dashboard-card">
+          <div className="flex items-center">
+            <TrendingUp className="h-8 w-8 text-purple-600 mr-3" />
+            <div>
+              <p className="text-sm font-medium text-gray-600">Resolution Rate</p>
+              <p className="text-2xl font-bold text-gray-900">
+                {forumsData.total_posts > 0 ? Math.round((forumsData.total_solved / forumsData.total_posts) * 100) : 0}%
+              </p>
+            </div>
+          </div>
+        </div>
+      </div>
 
-                  <div className="grid grid-cols-2 sm:grid-cols-4 lg:grid-cols-6 gap-4 mt-4">
-                    <div>
-                      <p className="text-xs text-gray-600">Total Posts</p>
-                      <p className="text-lg font-semibold text-gray-900">{forum.total_posts}</p>
-                    </div>
-                    <div>
-                      <p className="text-xs text-gray-600">This Week</p>
-                      <p className="text-lg font-semibold text-blue-600">{forum.posts_week}</p>
-                    </div>
-                    <div>
-                      <p className="text-xs text-gray-600">Today</p>
-                      <p className="text-lg font-semibold text-green-600">{forum.posts_today}</p>
-                    </div>
-                    <div>
-                      <p className="text-xs text-gray-600">Authors</p>
-                      <p className="text-lg font-semibold text-purple-600">{forum.unique_authors}</p>
-                    </div>
-                    <div>
-                      <p className="text-xs text-gray-600">Sentiment</p>
-                      <p className={`text-sm font-semibold px-2 py-1 rounded ${getSentimentBadge(forum.avg_sentiment)}`}>
-                        {(forum.avg_sentiment * 100).toFixed(0)}%
-                      </p>
-                    </div>
-                    <div>
-                      <p className="text-xs text-gray-600">Trend</p>
-                      <p className={`text-sm font-semibold ${forum.activity_trend > 0 ? 'text-green-600' : forum.activity_trend < 0 ? 'text-red-600' : 'text-gray-600'}`}>
-                        {forum.activity_trend > 0 ? '+' : ''}{forum.activity_trend.toFixed(1)}%
-                      </p>
-                    </div>
-                  </div>
-
-                  {/* Top Topics */}
-                  {forum.top_topics.length > 0 && (
-                    <div className="mt-4">
-                      <p className="text-xs text-gray-600 mb-2">Popular Topics</p>
-                      <div className="flex flex-wrap gap-2">
-                        {forum.top_topics.slice(0, 4).map((topic, topicIndex) => (
-                          <span
-                            key={topicIndex}
-                            className="px-2 py-1 bg-gray-100 text-gray-700 rounded-md text-xs"
-                          >
-                            {topic}
-                          </span>
-                        ))}
-                      </div>
-                    </div>
-                  )}
+      {/* Forums Grid */}
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+        {forums.map(([forumKey, forum]: [string, ForumOverview]) => (
+          <div key={forumKey} className="dashboard-card">
+            <div className="flex items-start justify-between mb-4">
+              <div className="flex items-center">
+                <span className="text-2xl mr-3">{forum.icon}</span>
+                <div>
+                  <h3 className="text-lg font-semibold text-gray-900">{forum.name}</h3>
+                  <p className="text-sm text-gray-600 line-clamp-2">{forum.description}</p>
                 </div>
+              </div>
+              <a
+                href={forum.url}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="flex-shrink-0 p-1 text-gray-400 hover:text-blue-600 transition-colors"
+              >
+                <ExternalLink className="h-4 w-4" />
+              </a>
+            </div>
 
-                <div className="flex flex-col space-y-2">
-                  <a
-                    href={forum.url}
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    className="flex items-center space-x-2 px-3 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 transition-colors text-sm"
-                  >
-                    <ExternalLink className="h-4 w-4" />
-                    <span>Visit Forum</span>
-                  </a>
+            {/* Forum Stats */}
+            <div className="space-y-3">
+              <div className="flex justify-between items-center">
+                <span className="text-sm text-gray-600">Posts</span>
+                <div className="flex items-center space-x-2">
+                  <MessageCircle className="h-4 w-4 text-gray-400" />
+                  <span className="text-sm font-medium">{forum.post_count}</span>
+                </div>
+              </div>
+              
+              <div className="flex justify-between items-center">
+                <span className="text-sm text-gray-600">Solved</span>
+                <div className="flex items-center space-x-2">
+                  <CheckCircle className="h-4 w-4 text-green-500" />
+                  <span className="text-sm font-medium">{forum.solved_count}</span>
+                </div>
+              </div>
+              
+              <div className="flex justify-between items-center">
+                <span className="text-sm text-gray-600">Critical</span>
+                <div className="flex items-center space-x-2">
+                  <AlertCircle className="h-4 w-4 text-red-500" />
+                  <span className="text-sm font-medium">{forum.critical_count}</span>
+                </div>
+              </div>
+              
+              <div className="flex justify-between items-center">
+                <span className="text-sm text-gray-600">Authors</span>
+                <div className="flex items-center space-x-2">
+                  <Users className="h-4 w-4 text-gray-400" />
+                  <span className="text-sm font-medium">{forum.authors_count}</span>
                 </div>
               </div>
             </div>
-          ))}
-        </div>
+
+            {/* Health Score */}
+            <div className="mt-4 pt-4 border-t border-gray-200">
+              <div className="flex justify-between items-center">
+                <span className="text-sm text-gray-600">Health Score</span>
+                <div className={`px-3 py-1 rounded-full text-xs font-medium ${getHealthColor(forum.health_score)}`}>
+                  {Math.round(forum.health_score)}% - {getHealthLabel(forum.health_score)}
+                </div>
+              </div>
+            </div>
+
+            {/* Latest Activity */}
+            {forum.latest_activity && (
+              <div className="mt-3 pt-3 border-t border-gray-200">
+                <div className="text-xs text-gray-500 mb-1">Latest Activity</div>
+                <div className="text-sm text-gray-700 line-clamp-1" title={forum.latest_activity.title}>
+                  {forum.latest_activity.title}
+                </div>
+                <div className="text-xs text-gray-500 mt-1">
+                  by {forum.latest_activity.author} • {new Date(forum.latest_activity.date).toLocaleDateString()}
+                </div>
+              </div>
+            )}
+          </div>
+        ))}
+      </div>
+
+      {/* Timestamp */}
+      <div className="text-center">
+        <p className="text-sm text-gray-500">
+          Last updated: {new Date(forumsData.generated_at).toLocaleString()}
+        </p>
       </div>
     </div>
   )
