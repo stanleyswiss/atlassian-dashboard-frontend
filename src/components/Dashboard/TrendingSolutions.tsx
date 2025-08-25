@@ -6,6 +6,7 @@ import LoadingSpinner from '@/components/Common/LoadingSpinner'
 interface TrendingSolution {
   solution_title: string
   problem_solved: string
+  solution_description?: string  // Enhanced detailed solution steps from backend
   solution_type: string
   author: string
   url: string

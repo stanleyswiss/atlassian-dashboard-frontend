@@ -5,6 +5,7 @@ import LoadingSpinner from '@/components/Common/LoadingSpinner'
 
 interface CriticalIssue {
   issue_title: string
+  summary?: string  // Enhanced detailed summary from backend
   severity: 'critical' | 'high' | 'medium' | 'low'
   report_count: number
   affected_products: string[]
