@@ -59,7 +59,7 @@ const navigationItems: NavItem[] = [
   },
   {
     id: 'schedule',
-    label: 'Schedule',
+    label: 'Product Roadmap',
     icon: Calendar,
   }
 ]
