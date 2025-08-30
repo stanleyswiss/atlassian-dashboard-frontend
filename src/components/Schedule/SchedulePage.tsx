@@ -401,13 +401,13 @@ export default function SchedulePage() {
 
   // Helper functions to transform API data
   const mapProductsToCategory = (products: string[]): PostCategory => {
-    // Map product names to PostCategory
-    if (products.includes('jira') && !products.includes('confluence')) return 'jira'
-    if (products.includes('jsm')) return 'jsm' 
-    if (products.includes('confluence') && !products.includes('jira')) return 'confluence'
-    if (products.includes('bitbucket')) return 'bitbucket'
+    // Map product names to PostCategory enum values
+    if (products.includes('jira') && !products.includes('confluence')) return PostCategory.JIRA
+    if (products.includes('jsm')) return PostCategory.JSM 
+    if (products.includes('confluence') && !products.includes('jira')) return PostCategory.CONFLUENCE
+    if (products.includes('bitbucket')) return PostCategory.JIRA // Map bitbucket to jira as fallback
     // Default to jira if multiple or unknown products
-    return 'jira'
+    return PostCategory.JIRA
   }
 
   const mapStatus = (status: string): 'planned' | 'in-progress' | 'released' | 'beta' => {
