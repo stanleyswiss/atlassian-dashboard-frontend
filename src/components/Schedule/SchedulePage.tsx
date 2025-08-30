@@ -365,10 +365,24 @@ export default function SchedulePage() {
       const nextQuarter = getNextQuarter(currentQuarter)
       filteredItems = filteredItems.filter(item => item.quarter === nextQuarter)
     } else if (filter.timeframe === 'future') {
-      // Future: upcoming status OR quarters after current year
+      // Future: not released status OR quarters after current quarter
       filteredItems = filteredItems.filter(item => {
-        const itemYear = parseInt(item.quarter?.split(' ')[1] || '2024')
-        return item.status === 'planned' || itemYear > currentYear
+        // Non-released items are always considered future
+        if (item.status !== 'released') {
+          return true
+        }
+        
+        // For released items, check if quarter is in the future
+        const itemQuarter = item.quarter || 'Q1 2024'
+        const [qPart, yearPart] = itemQuarter.split(' ')
+        const itemYear = parseInt(yearPart || '2024')
+        const itemQ = parseInt(qPart?.replace('Q', '') || '1')
+        
+        const currentQ = Math.ceil((now.getMonth() + 1) / 3)
+        
+        // Compare quarters properly
+        return (itemYear > currentYear) || 
+               (itemYear === currentYear && itemQ > currentQ)
       })
     }
 
