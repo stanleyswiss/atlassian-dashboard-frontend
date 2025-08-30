@@ -2,14 +2,15 @@
 import ActivityChart from '../Dashboard/ActivityChart'
 import { StatCard } from '../Dashboard/StatsCards'
 import ContentIntelligence from './ContentIntelligence'
+import RoadmapPage from './RoadmapPage'
 import { useState, useEffect } from 'react'
-import { TrendingUp, BarChart3, PieChart, Users, Brain, Activity } from 'lucide-react'
+import { TrendingUp, BarChart3, PieChart, Users, Brain, Activity, Calendar } from 'lucide-react'
 import { analyticsService } from '@/services'
 
 export default function AnalyticsPage() {
   const [summaryStats, setSummaryStats] = useState<any>(null)
   const [isLoading, setIsLoading] = useState(true)
-  const [activeTab, setActiveTab] = useState<'overview' | 'intelligence'>('overview')
+  const [activeTab, setActiveTab] = useState<'overview' | 'intelligence' | 'roadmap'>('overview')
 
   useEffect(() => {
     loadAnalytics()
@@ -68,6 +69,20 @@ export default function AnalyticsPage() {
             <div className="flex items-center space-x-2">
               <Brain className="w-4 h-4" />
               <span>Content Intelligence</span>
+            </div>
+          </button>
+          
+          <button
+            onClick={() => setActiveTab('roadmap')}
+            className={`py-2 px-1 border-b-2 font-medium text-sm transition-colors ${
+              activeTab === 'roadmap'
+                ? 'border-green-500 text-green-600'
+                : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
+            }`}
+          >
+            <div className="flex items-center space-x-2">
+              <Calendar className="w-4 h-4" />
+              <span>Product Roadmap</span>
             </div>
           </button>
           
@@ -241,8 +256,10 @@ export default function AnalyticsPage() {
             </div>
           </div>
         </>
-      ) : (
+      ) : activeTab === 'intelligence' ? (
         <ContentIntelligence />
+      ) : (
+        <RoadmapPage />
       )}
     </div>
   )
