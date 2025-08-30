@@ -262,22 +262,22 @@ export default function SchedulePage() {
 
     try {
       console.log('🔄 Starting roadmap data fetch...')
+      console.log('🔄 API base URL:', import.meta.env.VITE_API_URL)
       
-      // Fetch real roadmap data from both Cloud and Data Center APIs
-      const [cloudResponse, dcResponse] = await Promise.all([
-        api.get('/api/roadmap/cloud').catch(err => {
-          console.error('❌ Cloud API error:', err)
-          return { data: null }
-        }),
-        api.get('/api/roadmap/data-center').catch(err => {
-          console.error('❌ DC API error:', err)
-          return { data: null }
-        })
-      ])
+      // Test individual API calls with detailed logging
+      console.log('🔄 Calling Cloud API...')
+      const cloudResponse = await api.get('/api/roadmap/cloud')
+      console.log('✅ Cloud API response received:', cloudResponse)
       
-      console.log('✅ API responses received')
+      console.log('🔄 Calling DC API...')
+      const dcResponse = await api.get('/api/roadmap/data-center')  
+      console.log('✅ DC API response received:', dcResponse)
 
       console.log('🔍 Raw responses:', { cloudResponse, dcResponse })
+      console.log('🔍 Cloud response keys:', cloudResponse ? Object.keys(cloudResponse) : 'null')
+      console.log('🔍 DC response keys:', dcResponse ? Object.keys(dcResponse) : 'null')
+      console.log('🔍 Cloud response status:', cloudResponse?.status)
+      console.log('🔍 DC response status:', dcResponse?.status)
       
       if (!cloudResponse || !dcResponse) {
         console.error('❌ One or both API responses are null/undefined')
