@@ -110,18 +110,19 @@ export default function CriticalIssues() {
 
   return (
     <div className="dashboard-card">
-      <div className="flex items-center justify-between mb-4">
-        <button
-          onClick={() => setIsExpanded(!isExpanded)}
-          className="flex items-center space-x-3 hover:opacity-80 transition-opacity"
-        >
+      <div 
+        className="flex items-center justify-between mb-4 cursor-pointer hover:bg-gray-50 rounded-lg p-2 -m-2 transition-colors"
+        onClick={() => setIsExpanded(!isExpanded)}
+      >
+        <div className="flex items-center space-x-3">
           <AlertTriangle className="w-5 h-5 text-red-600" />
           <h3 className="text-lg font-semibold text-gray-900">Critical Issues</h3>
           <span className="text-sm text-gray-500">({issues?.length || 0})</span>
           {isExpanded ? <ChevronUp className="w-5 h-5 text-gray-400" /> : <ChevronDown className="w-5 h-5 text-gray-400" />}
-        </button>
+        </div>
         
         <select
+          onClick={(e) => e.stopPropagation()}
           value={timeFrame}
           onChange={(e) => setTimeFrame(Number(e.target.value))}
           className="text-sm border border-gray-300 rounded-md px-3 py-1 focus:outline-none focus:ring-2 focus:ring-blue-500"

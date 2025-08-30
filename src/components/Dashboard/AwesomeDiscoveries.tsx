@@ -106,18 +106,21 @@ export default function AwesomeDiscoveries() {
 
   return (
     <div className="dashboard-card">
-      <div className="flex items-center justify-between mb-4">
-        <button
-          onClick={() => setIsExpanded(!isExpanded)}
-          className="flex items-center space-x-3 hover:opacity-80 transition-opacity"
-        >
+      <div 
+        className="flex items-center justify-between mb-4 cursor-pointer hover:bg-gray-50 rounded-lg p-2 -m-2 transition-colors"
+        onClick={() => setIsExpanded(!isExpanded)}
+      >
+        <div className="flex items-center space-x-3">
           <Lightbulb className="w-5 h-5 text-yellow-600" />
           <h3 className="text-lg font-semibold text-gray-900">Awesome Discoveries</h3>
           <span className="text-sm text-gray-500">({discoveries?.length || 0})</span>
           {isExpanded ? <ChevronUp className="w-5 h-5 text-gray-400" /> : <ChevronDown className="w-5 h-5 text-gray-400" />}
-        </button>
+        </div>
         
-        <button className="text-sm text-blue-600 hover:text-blue-700 font-medium">
+        <button 
+          className="text-sm text-blue-600 hover:text-blue-700 font-medium"
+          onClick={(e) => e.stopPropagation()}
+        >
           View All
         </button>
       </div>
