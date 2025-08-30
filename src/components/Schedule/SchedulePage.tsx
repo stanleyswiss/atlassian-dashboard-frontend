@@ -306,21 +306,39 @@ export default function SchedulePage() {
 
       // Process Cloud features
       if (cloudData && cloudData.features && Array.isArray(cloudData.features)) {
-        const cloudItems = cloudData.features.map((feature: any, index: number) => ({
-          id: `cloud-${index}`,
-          title: feature.title,
-          description: feature.description,
-          category: mapProductsToCategory(feature.products || []),
-          platform: 'cloud' as const,
-          status: mapStatus(feature.status),
-          priority: 'medium' as const, // Default priority since API doesn't provide this
-          releaseDate: getReleaseDateFromQuarter(feature.quarter),
-          quarter: feature.quarter || 'Q1 2025',
-          tags: feature.products || [],
-          impact: 'major' as const, // Default impact
-          url: cloudData.url
-        }))
+        console.log('🌐 Processing Cloud features:', cloudData.features.length)
+        const cloudItems = cloudData.features.map((feature: any, index: number) => {
+          const mappedCategory = mapProductsToCategory(feature.products || [])
+          const mappedStatus = mapStatus(feature.status)
+          const releaseDate = getReleaseDateFromQuarter(feature.quarter)
+          
+          console.log(`🌐 Cloud item ${index}:`, {
+            title: feature.title,
+            products: feature.products,
+            mappedCategory,
+            status: feature.status,
+            mappedStatus,
+            quarter: feature.quarter,
+            releaseDate
+          })
+          
+          return {
+            id: `cloud-${index}`,
+            title: feature.title,
+            description: feature.description,
+            category: mappedCategory,
+            platform: 'cloud' as const,
+            status: mappedStatus,
+            priority: 'medium' as const, // Default priority since API doesn't provide this
+            releaseDate,
+            quarter: feature.quarter || 'Q1 2025',
+            tags: feature.products || [],
+            impact: 'major' as const, // Default impact
+            url: cloudData.url
+          }
+        })
         allItems.push(...cloudItems)
+        console.log('🌐 Added cloud items:', cloudItems.length)
       }
 
       // Process Data Center features  
@@ -353,43 +371,61 @@ export default function SchedulePage() {
 
       // Apply filters
       let filteredItems = [...allItems]
+      console.log('🔍 Before filtering:', filteredItems.length, 'items')
+      console.log('🔍 Filter settings:', filter)
       
       if (filter.category !== 'all') {
+        const beforeCount = filteredItems.length
         filteredItems = filteredItems.filter(item => item.category === filter.category)
+        console.log(`🔍 Category filter (${filter.category}): ${beforeCount} → ${filteredItems.length}`)
       }
 
       if (filter.platform !== 'all') {
+        const beforeCount = filteredItems.length
         filteredItems = filteredItems.filter(item => 
           item.platform === filter.platform || item.platform === 'both'
         )
+        console.log(`🔍 Platform filter (${filter.platform}): ${beforeCount} → ${filteredItems.length}`)
       }
 
       if (filter.status !== 'all') {
+        const beforeCount = filteredItems.length
         filteredItems = filteredItems.filter(item => item.status === filter.status)
+        console.log(`🔍 Status filter (${filter.status}): ${beforeCount} → ${filteredItems.length}`)
       }
 
       if (filter.quarter !== 'all') {
+        const beforeCount = filteredItems.length
         filteredItems = filteredItems.filter(item => item.quarter === filter.quarter)
+        console.log(`🔍 Quarter filter (${filter.quarter}): ${beforeCount} → ${filteredItems.length}`)
       }
 
       // Apply timeframe filter
       const now = new Date()
       const currentQuarter = `Q${Math.ceil((now.getMonth() + 1) / 3)} ${now.getFullYear()}`
+      console.log('🔍 Current quarter calculated:', currentQuarter)
       
       if (filter.timeframe === 'current') {
+        const beforeCount = filteredItems.length
         filteredItems = filteredItems.filter(item => item.quarter === currentQuarter)
+        console.log(`🔍 Timeframe filter (current=${currentQuarter}): ${beforeCount} → ${filteredItems.length}`)
       } else if (filter.timeframe === 'next') {
         const nextQuarter = getNextQuarter(currentQuarter)
+        const beforeCount = filteredItems.length
         filteredItems = filteredItems.filter(item => item.quarter === nextQuarter)
+        console.log(`🔍 Timeframe filter (next=${nextQuarter}): ${beforeCount} → ${filteredItems.length}`)
       } else if (filter.timeframe === 'future') {
+        const beforeCount = filteredItems.length
         filteredItems = filteredItems.filter(item => 
           new Date(item.releaseDate) > new Date(now.getTime() + 90 * 24 * 60 * 60 * 1000)
         )
+        console.log(`🔍 Timeframe filter (future): ${beforeCount} → ${filteredItems.length}`)
       }
 
       // Sort by release date
       filteredItems.sort((a, b) => new Date(a.releaseDate).getTime() - new Date(b.releaseDate).getTime())
 
+      console.log('🔍 Final filtered items:', filteredItems.length)
       setRoadmapItems(filteredItems)
     } catch (err: any) {
       console.error('Failed to load roadmap data:', err)
