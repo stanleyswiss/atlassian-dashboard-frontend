@@ -53,7 +53,7 @@ export default function SchedulePage() {
     platform: 'all',
     status: 'all',
     quarter: 'all',
-    timeframe: 'current'
+    timeframe: 'all'
   })
 
   // Mock roadmap data - in real implementation this would come from Atlassian's roadmap API
