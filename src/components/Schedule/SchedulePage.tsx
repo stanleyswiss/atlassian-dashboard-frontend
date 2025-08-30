@@ -18,6 +18,7 @@ import {
 import { PostCategory } from '@/types'
 import LoadingSpinner from '@/components/Common/LoadingSpinner'
 import { ErrorMessage } from '@/components/Common/ErrorBoundary'
+import api from '@/services/api'
 
 interface RoadmapItem {
   id: string
@@ -260,12 +261,62 @@ export default function SchedulePage() {
     setError(null)
 
     try {
-      // Simulate API call
-      await new Promise(resolve => setTimeout(resolve, 500))
-      
-      let filteredItems = [...mockRoadmapItems]
+      // Fetch real roadmap data from both Cloud and Data Center APIs
+      const [cloudResponse, dcResponse] = await Promise.all([
+        api.get('/api/roadmap/cloud'),
+        api.get('/api/roadmap/data-center')
+      ])
+
+      const cloudData = cloudResponse.data
+      const dcData = dcResponse.data
+
+      console.log('Cloud roadmap data:', cloudData)
+      console.log('DC roadmap data:', dcData)
+
+      // Transform real API data to match RoadmapItem interface
+      let allItems: RoadmapItem[] = []
+
+      // Process Cloud features
+      if (cloudData.features && Array.isArray(cloudData.features)) {
+        const cloudItems = cloudData.features.map((feature: any, index: number) => ({
+          id: `cloud-${index}`,
+          title: feature.title,
+          description: feature.description,
+          category: mapProductsToCategory(feature.products || []),
+          platform: 'cloud' as const,
+          status: mapStatus(feature.status),
+          priority: 'medium' as const, // Default priority since API doesn't provide this
+          releaseDate: getReleaseDateFromQuarter(feature.quarter),
+          quarter: feature.quarter || 'Q1 2025',
+          tags: feature.products || [],
+          impact: 'major' as const, // Default impact
+          url: cloudData.url
+        }))
+        allItems.push(...cloudItems)
+      }
+
+      // Process Data Center features  
+      if (dcData.features && Array.isArray(dcData.features)) {
+        const dcItems = dcData.features.map((feature: any, index: number) => ({
+          id: `dc-${index}`,
+          title: feature.title,
+          description: feature.description,
+          category: mapProductsToCategory(feature.products || []),
+          platform: 'dc' as const,
+          status: mapStatus(feature.status),
+          priority: 'medium' as const,
+          releaseDate: getReleaseDateFromQuarter(feature.quarter),
+          quarter: feature.quarter || 'Q1 2025',
+          tags: feature.products || [],
+          impact: 'major' as const,
+          url: dcData.url
+        }))
+        allItems.push(...dcItems)
+      }
 
       // Apply filters
+      let filteredItems = [...allItems]
+      
       if (filter.category !== 'all') {
         filteredItems = filteredItems.filter(item => item.category === filter.category)
       }
@@ -304,10 +355,43 @@ export default function SchedulePage() {
 
       setRoadmapItems(filteredItems)
     } catch (err: any) {
+      console.error('Failed to load roadmap data:', err)
       setError(err.message || 'Failed to load roadmap data')
     } finally {
       setIsLoading(false)
     }
+  }
+
+  // Helper functions to transform API data
+  const mapProductsToCategory = (products: string[]): PostCategory => {
+    // Map product names to PostCategory
+    if (products.includes('jira') && !products.includes('confluence')) return 'jira'
+    if (products.includes('jsm')) return 'jsm' 
+    if (products.includes('confluence') && !products.includes('jira')) return 'confluence'
+    if (products.includes('bitbucket')) return 'bitbucket'
+    // Default to jira if multiple or unknown products
+    return 'jira'
+  }
+
+  const mapStatus = (status: string): 'planned' | 'in-progress' | 'released' | 'beta' => {
+    const statusLower = status.toLowerCase()
+    if (statusLower.includes('released')) return 'released'
+    if (statusLower.includes('beta')) return 'beta'
+    if (statusLower.includes('development') || statusLower.includes('progress')) return 'in-progress'
+    return 'planned'
+  }
+
+  const getReleaseDateFromQuarter = (quarter: string): string => {
+    // Convert quarter like "Q3 2024" to approximate release date
+    const [q, year] = quarter.split(' ')
+    const yearNum = parseInt(year) || new Date().getFullYear()
+    const quarterNum = parseInt(q.replace('Q', '')) || 1
+    
+    // Map quarter to approximate month (end of quarter)
+    const monthMap = { 1: 3, 2: 6, 3: 9, 4: 12 }
+    const month = monthMap[quarterNum as keyof typeof monthMap] || 12
+    
+    return `${yearNum}-${month.toString().padStart(2, '0')}-15`
   }
 
   const getNextQuarter = (currentQuarter: string): string => {
