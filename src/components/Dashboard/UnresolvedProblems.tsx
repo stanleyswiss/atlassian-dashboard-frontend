@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react'
-import { HelpCircle, ExternalLink, Camera, Clock, AlertCircle, MessageCircle } from 'lucide-react'
+import { HelpCircle, ExternalLink, Camera, Clock, AlertCircle, MessageCircle, ChevronDown, ChevronUp } from 'lucide-react'
 import api from '@/services/api'
 import LoadingSpinner from '@/components/Common/LoadingSpinner'
 
@@ -21,6 +21,7 @@ export default function UnresolvedProblems() {
   const [isLoading, setIsLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
   const [sortBy, setSortBy] = useState<'urgency' | 'age'>('urgency')
+  const [isExpanded, setIsExpanded] = useState(false)
 
   useEffect(() => {
     loadUnresolvedProblems()
@@ -147,11 +148,15 @@ export default function UnresolvedProblems() {
   return (
     <div className="dashboard-card">
       <div className="flex items-center justify-between mb-4">
-        <div className="flex items-center space-x-3">
+        <button
+          onClick={() => setIsExpanded(!isExpanded)}
+          className="flex items-center space-x-3 hover:opacity-80 transition-opacity"
+        >
           <HelpCircle className="w-5 h-5 text-orange-600" />
           <h3 className="text-lg font-semibold text-gray-900">Unresolved Problems</h3>
           <span className="text-sm text-gray-500">({problems?.length || 0})</span>
-        </div>
+          {isExpanded ? <ChevronUp className="w-5 h-5 text-gray-400" /> : <ChevronDown className="w-5 h-5 text-gray-400" />}
+        </button>
         
         <div className="flex items-center space-x-2">
           <span className="text-sm text-gray-600">Sort by:</span>
@@ -166,13 +171,31 @@ export default function UnresolvedProblems() {
         </div>
       </div>
 
-      {error && (
-        <div className="mb-4 p-3 bg-yellow-50 border border-yellow-200 rounded-md">
-          <p className="text-sm text-yellow-800">{error}</p>
+      {/* Summary when collapsed */}
+      {!isExpanded && problems && problems.length > 0 && (
+        <div className="flex items-center justify-between p-3 bg-orange-50 rounded-md">
+          <div className="flex items-center space-x-3">
+            <span className="text-sm font-medium text-orange-900">
+              {problems.length} unresolved {problems.length === 1 ? 'problem' : 'problems'} needing help
+            </span>
+            <span className="text-sm text-orange-700">
+              {problems.filter(p => p.urgency === 'critical' || p.urgency === 'high').length} high priority
+            </span>
+          </div>
+          <span className="text-xs text-orange-600">Click to expand</span>
         </div>
       )}
 
-      {!problems || problems.length === 0 ? (
+      {/* Expanded content */}
+      {isExpanded && (
+        <>
+          {error && (
+            <div className="mb-4 p-3 bg-yellow-50 border border-yellow-200 rounded-md">
+              <p className="text-sm text-yellow-800">{error}</p>
+            </div>
+          )}
+
+          {!problems || problems.length === 0 ? (
         <div className="text-center py-8">
           <div className="inline-flex items-center justify-center w-12 h-12 bg-green-100 rounded-full mb-3">
             <HelpCircle className="w-6 h-6 text-green-600" />
@@ -277,12 +300,14 @@ export default function UnresolvedProblems() {
         </div>
       )}
 
-      <div className="mt-4 pt-4 border-t border-gray-200">
-        <button className="w-full text-center text-sm text-orange-600 hover:text-orange-700 font-medium flex items-center justify-center space-x-1">
-          <MessageCircle className="w-4 h-4" />
-          <span>Help resolve these issues</span>
-        </button>
-      </div>
+          <div className="mt-4 pt-4 border-t border-gray-200">
+            <button className="w-full text-center text-sm text-orange-600 hover:text-orange-700 font-medium flex items-center justify-center space-x-1">
+              <MessageCircle className="w-4 h-4" />
+              <span>Help resolve these issues</span>
+            </button>
+          </div>
+        </>
+      )}
     </div>
   )
 }

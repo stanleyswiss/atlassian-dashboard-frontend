@@ -12,6 +12,7 @@ import AwesomeDiscoveries from './AwesomeDiscoveries'
 import TrendingSolutions from './TrendingSolutions'
 import UnresolvedProblems from './UnresolvedProblems'
 import BusinessInsights from './BusinessInsights'
+import RoadmapSummary from './RoadmapSummary'
 import { DashboardOverview } from '@/types'
 import { dashboardService } from '@/services'
 import LoadingSpinner from '@/components/Common/LoadingSpinner'
@@ -145,6 +146,9 @@ export default function DashboardPage() {
       
       {/* Executive Summary */}
       <BusinessInsights />
+
+      {/* AI Roadmap Summary - New strategic intelligence section */}
+      <RoadmapSummary />
 
       {/* Critical Issues Section */}
       <CriticalIssues />

@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react'
-import { AlertTriangle, ExternalLink, Users, Clock, TrendingUp } from 'lucide-react'
+import { AlertTriangle, ExternalLink, Users, Clock, TrendingUp, ChevronDown, ChevronUp } from 'lucide-react'
 import api from '@/services/api'
 import LoadingSpinner from '@/components/Common/LoadingSpinner'
 
@@ -25,6 +25,7 @@ export default function CriticalIssues() {
   const [isLoading, setIsLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
   const [timeFrame, setTimeFrame] = useState(7) // days
+  const [isExpanded, setIsExpanded] = useState(false)
 
   useEffect(() => {
     loadCriticalIssues()
@@ -110,11 +111,15 @@ export default function CriticalIssues() {
   return (
     <div className="dashboard-card">
       <div className="flex items-center justify-between mb-4">
-        <div className="flex items-center space-x-3">
+        <button
+          onClick={() => setIsExpanded(!isExpanded)}
+          className="flex items-center space-x-3 hover:opacity-80 transition-opacity"
+        >
           <AlertTriangle className="w-5 h-5 text-red-600" />
           <h3 className="text-lg font-semibold text-gray-900">Critical Issues</h3>
           <span className="text-sm text-gray-500">({issues?.length || 0})</span>
-        </div>
+          {isExpanded ? <ChevronUp className="w-5 h-5 text-gray-400" /> : <ChevronDown className="w-5 h-5 text-gray-400" />}
+        </button>
         
         <select
           value={timeFrame}
@@ -127,13 +132,32 @@ export default function CriticalIssues() {
         </select>
       </div>
 
-      {error && (
-        <div className="mb-4 p-3 bg-yellow-50 border border-yellow-200 rounded-md">
-          <p className="text-sm text-yellow-800">{error}</p>
+      {/* Summary when collapsed */}
+      {!isExpanded && issues && issues.length > 0 && (
+        <div className="flex items-center justify-between p-3 bg-red-50 rounded-md">
+          <div className="flex items-center space-x-3">
+            <span className="text-sm font-medium text-red-900">
+              {issues.length} critical {issues.length === 1 ? 'issue' : 'issues'} requiring attention
+            </span>
+            <span className="text-sm text-red-700">
+              {issues.filter(i => i.severity === 'critical').length} critical, 
+              {issues.filter(i => i.severity === 'high').length} high priority
+            </span>
+          </div>
+          <span className="text-xs text-red-600">Click to expand</span>
         </div>
       )}
 
-      {!issues || issues.length === 0 ? (
+      {/* Expanded content */}
+      {isExpanded && (
+        <>
+          {error && (
+            <div className="mb-4 p-3 bg-yellow-50 border border-yellow-200 rounded-md">
+              <p className="text-sm text-yellow-800">{error}</p>
+            </div>
+          )}
+
+          {!issues || issues.length === 0 ? (
         <div className="text-center py-8">
           <div className="inline-flex items-center justify-center w-12 h-12 bg-green-100 rounded-full mb-3">
             <AlertTriangle className="w-6 h-6 text-green-600" />
@@ -224,6 +248,8 @@ export default function CriticalIssues() {
             </div>
           ))}
         </div>
+      )}
+        </>
       )}
     </div>
   )
