@@ -44,7 +44,8 @@ interface FilterOptions {
 }
 
 export default function SchedulePage() {
-  const [roadmapItems, setRoadmapItems] = useState<RoadmapItem[]>([])
+  const [allRoadmapItems, setAllRoadmapItems] = useState<RoadmapItem[]>([]) // Store all data
+  const [roadmapItems, setRoadmapItems] = useState<RoadmapItem[]>([]) // Store filtered data
   const [isLoading, setIsLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
   const [view, setView] = useState<'timeline' | 'grid' | 'calendar'>('timeline')
@@ -254,33 +255,22 @@ export default function SchedulePage() {
 
   useEffect(() => {
     loadRoadmapData()
-  }, [filter])
+  }, []) // Only fetch data on component mount
+
+  // Apply filters when filter changes
+  useEffect(() => {
+    applyFilters()
+  }, [filter, allRoadmapItems])
 
   const loadRoadmapData = async () => {
     setIsLoading(true)
     setError(null)
 
     try {
-      console.log('🔄 Starting roadmap data fetch...')
-      console.log('🔄 API base URL:', import.meta.env.VITE_API_URL)
-      
-      // Test individual API calls with detailed logging
-      console.log('🔄 Calling Cloud API...')
       const cloudResponse = await api.get('/api/roadmap/cloud')
-      console.log('✅ Cloud API response received:', cloudResponse)
-      
-      console.log('🔄 Calling DC API...')
-      const dcResponse = await api.get('/api/roadmap/data-center')  
-      console.log('✅ DC API response received:', dcResponse)
-
-      console.log('🔍 Raw responses:', { cloudResponse, dcResponse })
-      console.log('🔍 Cloud response keys:', cloudResponse ? Object.keys(cloudResponse) : 'null')
-      console.log('🔍 DC response keys:', dcResponse ? Object.keys(dcResponse) : 'null')
-      console.log('🔍 Cloud response status:', cloudResponse?.status)
-      console.log('🔍 DC response status:', dcResponse?.status)
+      const dcResponse = await api.get('/api/roadmap/data-center')
       
       if (!cloudResponse || !dcResponse) {
-        console.error('❌ One or both API responses are null/undefined')
         setError('Failed to fetch roadmap data from API')
         return
       }
@@ -288,57 +278,26 @@ export default function SchedulePage() {
       const cloudData = cloudResponse
       const dcData = dcResponse
 
-      console.log('🌐 Cloud response type:', typeof cloudData)
-      console.log('🖥️ DC response type:', typeof dcData)
-      console.log('🌐 Cloud data structure:', cloudData ? Object.keys(cloudData) : 'null')
-      console.log('🖥️ DC data structure:', dcData ? Object.keys(dcData) : 'null')
-      
-      // Additional safety checks
-      if (cloudData && typeof cloudData === 'string') {
-        console.error('❌ Cloud API returned string (likely HTML):', cloudData.substring(0, 200))
-      }
-      if (dcData && typeof dcData === 'string') {
-        console.error('❌ DC API returned string (likely HTML):', dcData.substring(0, 200))
-      }
-
       // Transform real API data to match RoadmapItem interface
       let allItems: RoadmapItem[] = []
 
       // Process Cloud features
       if (cloudData && cloudData.features && Array.isArray(cloudData.features)) {
-        console.log('🌐 Processing Cloud features:', cloudData.features.length)
-        const cloudItems = cloudData.features.map((feature: any, index: number) => {
-          const mappedCategory = mapProductsToCategory(feature.products || [])
-          const mappedStatus = mapStatus(feature.status)
-          const releaseDate = getReleaseDateFromQuarter(feature.quarter)
-          
-          console.log(`🌐 Cloud item ${index}:`, {
-            title: feature.title,
-            products: feature.products,
-            mappedCategory,
-            status: feature.status,
-            mappedStatus,
-            quarter: feature.quarter,
-            releaseDate
-          })
-          
-          return {
-            id: `cloud-${index}`,
-            title: feature.title,
-            description: feature.description,
-            category: mappedCategory,
-            platform: 'cloud' as const,
-            status: mappedStatus,
-            priority: 'medium' as const, // Default priority since API doesn't provide this
-            releaseDate,
-            quarter: feature.quarter || 'Q1 2025',
-            tags: feature.products || [],
-            impact: 'major' as const, // Default impact
-            url: cloudData.url
-          }
-        })
+        const cloudItems = cloudData.features.map((feature: any, index: number) => ({
+          id: `cloud-${index}`,
+          title: feature.title,
+          description: feature.description,
+          category: mapProductsToCategory(feature.products || []),
+          platform: 'cloud' as const,
+          status: mapStatus(feature.status),
+          priority: 'medium' as const,
+          releaseDate: getReleaseDateFromQuarter(feature.quarter),
+          quarter: feature.quarter || 'Q1 2025',
+          tags: feature.products || [],
+          impact: 'major' as const,
+          url: cloudData.url
+        }))
         allItems.push(...cloudItems)
-        console.log('🌐 Added cloud items:', cloudItems.length)
       }
 
       // Process Data Center features  
@@ -360,79 +319,63 @@ export default function SchedulePage() {
         allItems.push(...dcItems)
       }
 
-      console.log('Total items processed:', allItems.length)
-
-      // If no items found, add a message
       if (allItems.length === 0) {
-        console.warn('No roadmap items found in API responses')
         setError('No roadmap data available from API')
         return
       }
 
-      // Apply filters
-      let filteredItems = [...allItems]
-      console.log('🔍 Before filtering:', filteredItems.length, 'items')
-      console.log('🔍 Filter settings:', filter)
-      
-      if (filter.category !== 'all') {
-        const beforeCount = filteredItems.length
-        filteredItems = filteredItems.filter(item => item.category === filter.category)
-        console.log(`🔍 Category filter (${filter.category}): ${beforeCount} → ${filteredItems.length}`)
-      }
-
-      if (filter.platform !== 'all') {
-        const beforeCount = filteredItems.length
-        filteredItems = filteredItems.filter(item => 
-          item.platform === filter.platform || item.platform === 'both'
-        )
-        console.log(`🔍 Platform filter (${filter.platform}): ${beforeCount} → ${filteredItems.length}`)
-      }
-
-      if (filter.status !== 'all') {
-        const beforeCount = filteredItems.length
-        filteredItems = filteredItems.filter(item => item.status === filter.status)
-        console.log(`🔍 Status filter (${filter.status}): ${beforeCount} → ${filteredItems.length}`)
-      }
-
-      if (filter.quarter !== 'all') {
-        const beforeCount = filteredItems.length
-        filteredItems = filteredItems.filter(item => item.quarter === filter.quarter)
-        console.log(`🔍 Quarter filter (${filter.quarter}): ${beforeCount} → ${filteredItems.length}`)
-      }
-
-      // Apply timeframe filter
-      const now = new Date()
-      const currentQuarter = `Q${Math.ceil((now.getMonth() + 1) / 3)} ${now.getFullYear()}`
-      console.log('🔍 Current quarter calculated:', currentQuarter)
-      
-      if (filter.timeframe === 'current') {
-        const beforeCount = filteredItems.length
-        filteredItems = filteredItems.filter(item => item.quarter === currentQuarter)
-        console.log(`🔍 Timeframe filter (current=${currentQuarter}): ${beforeCount} → ${filteredItems.length}`)
-      } else if (filter.timeframe === 'next') {
-        const nextQuarter = getNextQuarter(currentQuarter)
-        const beforeCount = filteredItems.length
-        filteredItems = filteredItems.filter(item => item.quarter === nextQuarter)
-        console.log(`🔍 Timeframe filter (next=${nextQuarter}): ${beforeCount} → ${filteredItems.length}`)
-      } else if (filter.timeframe === 'future') {
-        const beforeCount = filteredItems.length
-        filteredItems = filteredItems.filter(item => 
-          new Date(item.releaseDate) > new Date(now.getTime() + 90 * 24 * 60 * 60 * 1000)
-        )
-        console.log(`🔍 Timeframe filter (future): ${beforeCount} → ${filteredItems.length}`)
-      }
-
-      // Sort by release date
-      filteredItems.sort((a, b) => new Date(a.releaseDate).getTime() - new Date(b.releaseDate).getTime())
-
-      console.log('🔍 Final filtered items:', filteredItems.length)
-      setRoadmapItems(filteredItems)
+      // Store all data and let filtering happen in applyFilters
+      setAllRoadmapItems(allItems)
     } catch (err: any) {
-      console.error('Failed to load roadmap data:', err)
       setError(err.message || 'Failed to load roadmap data')
     } finally {
       setIsLoading(false)
     }
+  }
+
+  const applyFilters = () => {
+    let filteredItems = [...allRoadmapItems]
+    
+    if (filter.category !== 'all') {
+      filteredItems = filteredItems.filter(item => item.category === filter.category)
+    }
+
+    if (filter.platform !== 'all') {
+      filteredItems = filteredItems.filter(item => 
+        item.platform === filter.platform || item.platform === 'both'
+      )
+    }
+
+    if (filter.status !== 'all') {
+      filteredItems = filteredItems.filter(item => item.status === filter.status)
+    }
+
+    if (filter.quarter !== 'all') {
+      filteredItems = filteredItems.filter(item => item.quarter === filter.quarter)
+    }
+
+    // Apply timeframe filter - fix future logic to look at status and quarter
+    const now = new Date()
+    const currentQuarter = `Q${Math.ceil((now.getMonth() + 1) / 3)} ${now.getFullYear()}`
+    const currentYear = now.getFullYear()
+    
+    if (filter.timeframe === 'current') {
+      filteredItems = filteredItems.filter(item => item.quarter === currentQuarter)
+    } else if (filter.timeframe === 'next') {
+      const nextQuarter = getNextQuarter(currentQuarter)
+      filteredItems = filteredItems.filter(item => item.quarter === nextQuarter)
+    } else if (filter.timeframe === 'future') {
+      // Future: upcoming status OR quarters after current year
+      filteredItems = filteredItems.filter(item => {
+        const itemYear = parseInt(item.quarter?.split(' ')[1] || '2024')
+        return item.status === 'planned' || itemYear > currentYear
+      })
+    }
+
+    // Sort by release date
+    filteredItems.sort((a, b) => new Date(a.releaseDate).getTime() - new Date(b.releaseDate).getTime())
+
+    setRoadmapItems(filteredItems)
   }
 
   // Helper functions to transform API data
