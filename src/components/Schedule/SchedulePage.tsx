@@ -285,8 +285,8 @@ export default function SchedulePage() {
         return
       }
 
-      const cloudData = cloudResponse?.data
-      const dcData = dcResponse?.data
+      const cloudData = cloudResponse
+      const dcData = dcResponse
 
       console.log('🌐 Cloud response type:', typeof cloudData)
       console.log('🖥️ DC response type:', typeof dcData)
