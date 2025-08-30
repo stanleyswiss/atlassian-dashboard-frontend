@@ -261,23 +261,51 @@ export default function SchedulePage() {
     setError(null)
 
     try {
+      console.log('🔄 Starting roadmap data fetch...')
+      
       // Fetch real roadmap data from both Cloud and Data Center APIs
       const [cloudResponse, dcResponse] = await Promise.all([
-        api.get('/api/roadmap/cloud'),
-        api.get('/api/roadmap/data-center')
+        api.get('/api/roadmap/cloud').catch(err => {
+          console.error('❌ Cloud API error:', err)
+          return { data: null }
+        }),
+        api.get('/api/roadmap/data-center').catch(err => {
+          console.error('❌ DC API error:', err)
+          return { data: null }
+        })
       ])
+      
+      console.log('✅ API responses received')
 
-      const cloudData = cloudResponse.data
-      const dcData = dcResponse.data
+      console.log('🔍 Raw responses:', { cloudResponse, dcResponse })
+      
+      if (!cloudResponse || !dcResponse) {
+        console.error('❌ One or both API responses are null/undefined')
+        setError('Failed to fetch roadmap data from API')
+        return
+      }
 
-      console.log('Cloud roadmap data:', cloudData)
-      console.log('DC roadmap data:', dcData)
+      const cloudData = cloudResponse?.data
+      const dcData = dcResponse?.data
+
+      console.log('🌐 Cloud response type:', typeof cloudData)
+      console.log('🖥️ DC response type:', typeof dcData)
+      console.log('🌐 Cloud data structure:', cloudData ? Object.keys(cloudData) : 'null')
+      console.log('🖥️ DC data structure:', dcData ? Object.keys(dcData) : 'null')
+      
+      // Additional safety checks
+      if (cloudData && typeof cloudData === 'string') {
+        console.error('❌ Cloud API returned string (likely HTML):', cloudData.substring(0, 200))
+      }
+      if (dcData && typeof dcData === 'string') {
+        console.error('❌ DC API returned string (likely HTML):', dcData.substring(0, 200))
+      }
 
       // Transform real API data to match RoadmapItem interface
       let allItems: RoadmapItem[] = []
 
       // Process Cloud features
-      if (cloudData.features && Array.isArray(cloudData.features)) {
+      if (cloudData && cloudData.features && Array.isArray(cloudData.features)) {
         const cloudItems = cloudData.features.map((feature: any, index: number) => ({
           id: `cloud-${index}`,
           title: feature.title,
@@ -296,7 +324,7 @@ export default function SchedulePage() {
       }
 
       // Process Data Center features  
-      if (dcData.features && Array.isArray(dcData.features)) {
+      if (dcData && dcData.features && Array.isArray(dcData.features)) {
         const dcItems = dcData.features.map((feature: any, index: number) => ({
           id: `dc-${index}`,
           title: feature.title,
@@ -312,6 +340,15 @@ export default function SchedulePage() {
           url: dcData.url
         }))
         allItems.push(...dcItems)
+      }
+
+      console.log('Total items processed:', allItems.length)
+
+      // If no items found, add a message
+      if (allItems.length === 0) {
+        console.warn('No roadmap items found in API responses')
+        setError('No roadmap data available from API')
+        return
       }
 
       // Apply filters
