@@ -68,12 +68,17 @@ export default function RoadmapSummary() {
         api.get(`/api/roadmap/data-center${params}`)
       ])
       
-      // Debug the actual response structure
-      console.log('Raw API responses:', { cloudResponse, dcResponse })
+      // Debug the actual response structure - api.get() returns data directly, not Axios response
+      console.log('Raw API responses:', { 
+        cloudResponse: cloudResponse,
+        dcResponse: dcResponse,
+        cloudResponseKeys: cloudResponse ? Object.keys(cloudResponse) : [],
+        dcResponseKeys: dcResponse ? Object.keys(dcResponse) : []
+      })
       
-      // Handle Axios response structure properly  
-      const cloudData = cloudResponse?.data || {}
-      const dcData = dcResponse?.data || {}
+      // api.get() returns data directly, not wrapped in Axios response
+      const cloudData = cloudResponse || {}
+      const dcData = dcResponse || {}
       
       console.log('Roadmap data loaded:', { 
         cloudFeatures: cloudData?.features?.length || 0,
