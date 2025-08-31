@@ -86,6 +86,21 @@ class PostsService {
     return this.getPosts({ limit, skip: 0 })
   }
 
+  // Get posts with AI-generated summaries instead of full content
+  async getPostsWithSummaries(filters: PostFilters = {}): Promise<any[]> {
+    const queryString = createQueryString(filters)
+    const url = `/api/posts/with-summaries${queryString ? `?${queryString}` : ''}`
+    
+    return withRetry(() => api.get<any[]>(url))
+  }
+
+  // Get posts by hashtag
+  async getPostsByHashtag(hashtag: string, limit: number = 20, skip: number = 0): Promise<Post[]> {
+    const url = `/api/posts/hashtag/${encodeURIComponent(hashtag)}?limit=${limit}&skip=${skip}`
+    
+    return withRetry(() => api.get<Post[]>(url))
+  }
+
   // Get posts with pagination
   async getPostsPaginated(page: number = 1, pageSize: number = 20, filters: Omit<PostFilters, 'skip' | 'limit'> = {}): Promise<{
     posts: Post[]

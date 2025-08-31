@@ -9,7 +9,8 @@ import {
   ExternalLink,
   MessageCircle,
   Clock,
-  RefreshCw
+  RefreshCw,
+  Hash
 } from 'lucide-react'
 import { Post, PostCategory, SentimentLabel } from '@/types'
 import { postsService } from '@/services'
@@ -60,8 +61,8 @@ export default function PostsPage() {
         })
         setPosts(searchResults)
       } else {
-        // Use regular get posts
-        const postsData = await postsService.getPosts(filters)
+        // Use AI-summarized posts instead of full posts
+        const postsData = await postsService.getPostsWithSummaries(filters)
         setPosts(postsData)
       }
 
@@ -248,12 +249,18 @@ export default function PostsPage() {
   )
 }
 
-// Individual Post Card Component
-function PostCard({ post }: { post: Post }) {
+// Individual Post Card Component  
+function PostCard({ post }: { post: any }) {
   const handlePostClick = () => {
     if (post.url) {
       window.open(post.url, '_blank', 'noopener,noreferrer')
     }
+  }
+
+  const handleHashtagClick = (hashtag: string, e: React.MouseEvent) => {
+    e.stopPropagation()
+    // Navigate to hashtag view (implement this based on your routing)
+    console.log('Hashtag clicked:', hashtag)
   }
 
   return (
@@ -274,6 +281,12 @@ function PostCard({ post }: { post: Post }) {
               {post.category.toUpperCase()}
             </span>
             
+            {post.ai_category && (
+              <span className="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-purple-100 text-purple-800">
+                {post.ai_category}
+              </span>
+            )}
+            
             {post.sentiment_label && (
               <span className={`text-xs font-medium ${getSentimentColor(post.sentiment_label)}`}>
                 {post.sentiment_label}
@@ -286,10 +299,50 @@ function PostCard({ post }: { post: Post }) {
         <ExternalLink className="h-4 w-4 text-gray-400 group-hover:text-blue-500 transition-colors flex-shrink-0 ml-3" />
       </div>
 
-      {/* Post Content */}
-      <p className="text-gray-600 mb-3 leading-relaxed line-clamp-3">
-        {post.excerpt || post.content || 'No content preview available'}
-      </p>
+      {/* AI Summary Content */}
+      <div className="mb-3">
+        <p className="text-gray-700 mb-2 leading-relaxed font-medium">
+          {post.ai_summary || post.excerpt || 'AI summary unavailable'}
+        </p>
+        
+        {/* Key Points */}
+        {post.ai_key_points && post.ai_key_points.length > 0 && (
+          <ul className="text-sm text-gray-600 list-disc list-inside space-y-1">
+            {post.ai_key_points.slice(0, 3).map((point: string, index: number) => (
+              <li key={index}>{point}</li>
+            ))}
+          </ul>
+        )}
+      </div>
+
+      {/* AI Hashtags */}
+      {post.ai_hashtags && post.ai_hashtags.length > 0 && (
+        <div className="flex flex-wrap gap-2 mb-3">
+          {post.ai_hashtags.slice(0, 5).map((hashtag: string) => (
+            <button
+              key={hashtag}
+              onClick={(e) => handleHashtagClick(hashtag, e)}
+              className="inline-flex items-center px-2 py-1 rounded-full text-xs bg-blue-50 text-blue-700 hover:bg-blue-100 transition-colors"
+            >
+              <Hash className="h-3 w-3 mr-1" />
+              {hashtag}
+            </button>
+          ))}
+        </div>
+      )}
+
+      {/* Action Required Badge */}
+      {post.ai_action_required && post.ai_action_required !== 'none' && (
+        <div className="flex items-center justify-between mb-3">
+          <span className={`inline-flex items-center px-2 py-1 rounded-full text-xs font-medium ${
+            post.ai_action_required === 'high' ? 'bg-red-100 text-red-800' :
+            post.ai_action_required === 'medium' ? 'bg-yellow-100 text-yellow-800' :
+            'bg-green-100 text-green-800'
+          }`}>
+            {post.ai_action_required.toUpperCase()} PRIORITY
+          </span>
+        </div>
+      )}
 
       {/* Post Footer */}
       <div className="flex items-center justify-between text-sm text-gray-500">

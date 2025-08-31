@@ -175,10 +175,21 @@ function TopicItem({ topic, rank }: { topic: TopicTrend; rank: number }) {
     return 'text-gray-600'
   }
 
+  const handleTopicClick = () => {
+    // Navigate to hashtag view - you can implement this based on your routing
+    console.log('Topic clicked:', topic.topic)
+    // For now, we'll just log it. In a real app, you'd navigate to a hashtag page
+    // Example: navigate(`/posts/hashtag/${encodeURIComponent(topic.topic)}`)
+  }
+
   const TrendIcon = getTrendIcon(topic.trending_score)
 
   return (
-    <div className="flex items-center justify-between p-3 bg-gray-50 rounded-lg hover:bg-gray-100 transition-colors">
+    <div 
+      className="flex items-center justify-between p-3 bg-gray-50 rounded-lg hover:bg-gray-100 transition-colors cursor-pointer"
+      onClick={handleTopicClick}
+      title={`Click to see posts related to #${topic.topic}`}
+    >
       {/* Left side - Topic info */}
       <div className="flex items-center space-x-3 flex-1 min-w-0">
         {/* Rank Badge */}
@@ -188,11 +199,11 @@ function TopicItem({ topic, rank }: { topic: TopicTrend; rank: number }) {
           {rank}
         </div>
 
-        {/* Topic Name */}
+        {/* Topic Name - Now clickable */}
         <div className="flex-1 min-w-0">
           <div className="flex items-center space-x-2">
-            <Hash className="h-4 w-4 text-gray-400 flex-shrink-0" />
-            <span className="font-medium text-gray-900 truncate" title={topic.topic}>
+            <Hash className="h-4 w-4 text-blue-500 flex-shrink-0" />
+            <span className="font-medium text-blue-600 hover:text-blue-800 truncate transition-colors" title={topic.topic}>
               {topic.topic}
             </span>
           </div>
