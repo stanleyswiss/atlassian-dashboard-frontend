@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react'
-import { Calendar, TrendingUp, Rocket, Package, ChevronRight, Globe, Server } from 'lucide-react'
+import { Calendar, TrendingUp, Rocket, Package, ChevronRight, Globe, Server, RefreshCw, Clock, Zap } from 'lucide-react'
 import api from '@/services/api'
 import LoadingSpinner from '@/components/Common/LoadingSpinner'
 
@@ -68,14 +68,16 @@ export default function RoadmapSummary() {
         api.get(`/api/roadmap/data-center${params}`)
       ])
       
-      const cloudData = cloudResponse.data
-      const dcData = dcResponse.data
+      const cloudData = cloudResponse?.data || {}
+      const dcData = dcResponse?.data || {}
       
       console.log('Roadmap data loaded:', { 
         cloudFeatures: cloudData.features?.length || 0,
         dcFeatures: dcData.features?.length || 0,
         cloudAI: !!cloudData.ai_analysis,
-        dcAI: !!dcData.ai_analysis
+        dcAI: !!dcData.ai_analysis,
+        cloudResponse: !!cloudResponse,
+        dcResponse: !!dcResponse
       })
       
       setCloudData(cloudData)
@@ -83,29 +85,32 @@ export default function RoadmapSummary() {
       setLastUpdated(new Date())
       
       // Use AI summaries directly from backend
-      if (cloudData.ai_analysis || dcData.ai_analysis) {
+      if (cloudData?.ai_analysis || dcData?.ai_analysis) {
         console.log('Using backend AI analysis')
         setAiSummary({
           released: {
-            cloud: cloudData.ai_analysis?.recent_releases_summary || `${cloudData.features?.filter(f => f.status?.toLowerCase().includes('released')).length || 0} features released recently`,
-            datacenter: dcData.ai_analysis?.recent_releases_summary || `${dcData.features?.filter(f => f.status?.toLowerCase().includes('released')).length || 0} features released recently`
+            cloud: cloudData?.ai_analysis?.recent_releases_summary || `${(cloudData?.features || []).filter(f => f.status?.toLowerCase().includes('released')).length} features released recently`,
+            datacenter: dcData?.ai_analysis?.recent_releases_summary || `${(dcData?.features || []).filter(f => f.status?.toLowerCase().includes('released')).length} features released recently`
           },
           upcoming: {
-            cloud: cloudData.ai_analysis?.upcoming_features_summary || `${cloudData.features?.filter(f => f.status?.toLowerCase().includes('development')).length || 0} features in development`,
-            datacenter: dcData.ai_analysis?.upcoming_features_summary || `${dcData.features?.filter(f => f.status?.toLowerCase().includes('development')).length || 0} features in development`
+            cloud: cloudData?.ai_analysis?.upcoming_features_summary || `${(cloudData?.features || []).filter(f => f.status?.toLowerCase().includes('development')).length} features in development`,
+            datacenter: dcData?.ai_analysis?.upcoming_features_summary || `${(dcData?.features || []).filter(f => f.status?.toLowerCase().includes('development')).length} features in development`
           }
         })
       } else {
         console.log('No AI analysis from backend, using feature counts')
-        // Simple fallback showing real feature counts
+        // Safe fallback showing real feature counts
+        const cloudFeatures = cloudData?.features || []
+        const dcFeatures = dcData?.features || []
+        
         setAiSummary({
           released: {
-            cloud: `${cloudData.features?.filter(f => f.status?.toLowerCase().includes('released')).length || 0} features released for Cloud platform`,
-            datacenter: `${dcData.features?.filter(f => f.status?.toLowerCase().includes('released')).length || 0} features released for Data Center platform`
+            cloud: `${cloudFeatures.filter(f => f?.status?.toLowerCase().includes('released')).length} features released for Cloud platform`,
+            datacenter: `${dcFeatures.filter(f => f?.status?.toLowerCase().includes('released')).length} features released for Data Center platform`
           },
           upcoming: {
-            cloud: `${cloudData.features?.filter(f => f.status?.toLowerCase().includes('development') || f.status?.toLowerCase().includes('upcoming')).length || 0} features in development for Cloud platform`,
-            datacenter: `${dcData.features?.filter(f => f.status?.toLowerCase().includes('development') || f.status?.toLowerCase().includes('upcoming')).length || 0} features in development for Data Center platform`
+            cloud: `${cloudFeatures.filter(f => f?.status?.toLowerCase().includes('development') || f?.status?.toLowerCase().includes('upcoming')).length} features in development for Cloud platform`,
+            datacenter: `${dcFeatures.filter(f => f?.status?.toLowerCase().includes('development') || f?.status?.toLowerCase().includes('upcoming')).length} features in development for Data Center platform`
           }
         })
       }
