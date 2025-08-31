@@ -39,28 +39,79 @@ export default function RoadmapSummary() {
     loadRoadmapData()
   }, [])
 
-  const loadRoadmapData = async () => {
-    setIsLoading(true)
+  const loadRoadmapData = async (forceRefresh = false) => {
+    const wasInitialLoad = isLoading
+    if (!wasInitialLoad) setIsRefreshing(true)
     
     try {
+      console.log('Loading roadmap data...', { forceRefresh })
+      const params = forceRefresh ? '?force_refresh=true' : ''
       const [cloudResponse, dcResponse] = await Promise.all([
-        api.get('/api/roadmap/cloud'),
-        api.get('/api/roadmap/data-center')
+        api.get(`/api/roadmap/cloud${params}`),
+        api.get(`/api/roadmap/data-center${params}`)
       ])
       
       const cloudData = cloudResponse.data
       const dcData = dcResponse.data
       
+      console.log('Roadmap data loaded:', { 
+        cloudFeatures: cloudData.features?.length || 0,
+        dcFeatures: dcData.features?.length || 0,
+        cloudAI: !!cloudData.ai_analysis,
+        dcAI: !!dcData.ai_analysis
+      })
+      
       setCloudData(cloudData)
       setDcData(dcData)
+      setLastUpdated(new Date())
       
-      // Generate AI summaries from real data
-      generateAISummaries(cloudData, dcData)
+      // Use AI summaries directly from backend
+      if (cloudData.ai_analysis || dcData.ai_analysis) {
+        console.log('Using backend AI analysis')
+        setAiSummary({
+          released: {
+            cloud: cloudData.ai_analysis?.recent_releases_summary || `${cloudData.features?.filter(f => f.status?.toLowerCase().includes('released')).length || 0} features released recently`,
+            datacenter: dcData.ai_analysis?.recent_releases_summary || `${dcData.features?.filter(f => f.status?.toLowerCase().includes('released')).length || 0} features released recently`
+          },
+          upcoming: {
+            cloud: cloudData.ai_analysis?.upcoming_features_summary || `${cloudData.features?.filter(f => f.status?.toLowerCase().includes('development')).length || 0} features in development`,
+            datacenter: dcData.ai_analysis?.upcoming_features_summary || `${dcData.features?.filter(f => f.status?.toLowerCase().includes('development')).length || 0} features in development`
+          }
+        })
+      } else {
+        console.log('No AI analysis from backend, using feature counts')
+        // Simple fallback showing real feature counts
+        setAiSummary({
+          released: {
+            cloud: `${cloudData.features?.filter(f => f.status?.toLowerCase().includes('released')).length || 0} features released for Cloud platform`,
+            datacenter: `${dcData.features?.filter(f => f.status?.toLowerCase().includes('released')).length || 0} features released for Data Center platform`
+          },
+          upcoming: {
+            cloud: `${cloudData.features?.filter(f => f.status?.toLowerCase().includes('development') || f.status?.toLowerCase().includes('upcoming')).length || 0} features in development for Cloud platform`,
+            datacenter: `${dcData.features?.filter(f => f.status?.toLowerCase().includes('development') || f.status?.toLowerCase().includes('upcoming')).length || 0} features in development for Data Center platform`
+          }
+        })
+      }
+      
+      // Store last update time in localStorage
+      localStorage.setItem('roadmap_last_updated', new Date().toISOString())
       
     } catch (err) {
       console.error('Failed to load roadmap data:', err)
+      // Set error state with real data counts if available
+      setAiSummary({
+        released: {
+          cloud: 'Error loading roadmap data. Please try refreshing.',
+          datacenter: 'Error loading roadmap data. Please try refreshing.'
+        },
+        upcoming: {
+          cloud: 'Error loading roadmap data. Please try refreshing.',
+          datacenter: 'Error loading roadmap data. Please try refreshing.'
+        }
+      })
     } finally {
       setIsLoading(false)
+      setIsRefreshing(false)
     }
   }
 
