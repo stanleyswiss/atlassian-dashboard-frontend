@@ -68,16 +68,22 @@ export default function RoadmapSummary() {
         api.get(`/api/roadmap/data-center${params}`)
       ])
       
+      // Debug the actual response structure
+      console.log('Raw API responses:', { cloudResponse, dcResponse })
+      
+      // Handle Axios response structure properly  
       const cloudData = cloudResponse?.data || {}
       const dcData = dcResponse?.data || {}
       
       console.log('Roadmap data loaded:', { 
-        cloudFeatures: cloudData.features?.length || 0,
-        dcFeatures: dcData.features?.length || 0,
-        cloudAI: !!cloudData.ai_analysis,
-        dcAI: !!dcData.ai_analysis,
+        cloudFeatures: cloudData?.features?.length || 0,
+        dcFeatures: dcData?.features?.length || 0,
+        cloudAI: !!cloudData?.ai_analysis,
+        dcAI: !!dcData?.ai_analysis,
         cloudResponse: !!cloudResponse,
-        dcResponse: !!dcResponse
+        dcResponse: !!dcResponse,
+        cloudDataKeys: Object.keys(cloudData || {}),
+        dcDataKeys: Object.keys(dcData || {})
       })
       
       setCloudData(cloudData)
@@ -118,17 +124,28 @@ export default function RoadmapSummary() {
       // Store last update time in localStorage
       localStorage.setItem('roadmap_last_updated', new Date().toISOString())
       
-    } catch (err) {
+    } catch (err: any) {
       console.error('Failed to load roadmap data:', err)
-      // Set error state with real data counts if available
+      console.error('Error details:', { 
+        message: err.message, 
+        status: err.response?.status,
+        statusText: err.response?.statusText,
+        data: err.response?.data 
+      })
+      
+      // Set error state with specific error information
+      const errorMsg = err.response?.status === 502 
+        ? 'Backend service unavailable (502). Please try again later.' 
+        : `Error loading roadmap data: ${err.message}`
+        
       setAiSummary({
         released: {
-          cloud: 'Error loading roadmap data. Please try refreshing.',
-          datacenter: 'Error loading roadmap data. Please try refreshing.'
+          cloud: errorMsg,
+          datacenter: errorMsg
         },
         upcoming: {
-          cloud: 'Error loading roadmap data. Please try refreshing.',
-          datacenter: 'Error loading roadmap data. Please try refreshing.'
+          cloud: errorMsg,
+          datacenter: errorMsg
         }
       })
     } finally {
