@@ -25,6 +25,8 @@ export default function RoadmapSummary() {
   const [cloudData, setCloudData] = useState<RoadmapData | null>(null)
   const [dcData, setDcData] = useState<RoadmapData | null>(null)
   const [isLoading, setIsLoading] = useState(true)
+  const [isRefreshing, setIsRefreshing] = useState(false)
+  const [lastUpdated, setLastUpdated] = useState<Date | null>(null)
   const [activeTab, setActiveTab] = useState<'released' | 'upcoming'>('released')
   const [activePlatform, setActivePlatform] = useState<'cloud' | 'datacenter'>('cloud')
   const [aiSummary, setAiSummary] = useState<{
@@ -39,6 +41,21 @@ export default function RoadmapSummary() {
     loadRoadmapData()
   }, [])
 
+  const shouldAutoRefresh = () => {
+    const lastUpdate = localStorage.getItem('roadmap_last_updated')
+    if (!lastUpdate) return true
+    
+    const lastUpdateDate = new Date(lastUpdate)
+    const weekAgo = new Date()
+    weekAgo.setDate(weekAgo.getDate() - 7)
+    
+    return lastUpdateDate < weekAgo
+  }
+  
+  const handleManualRefresh = async () => {
+    await loadRoadmapData(true) // Force refresh
+  }
+  
   const loadRoadmapData = async (forceRefresh = false) => {
     const wasInitialLoad = isLoading
     if (!wasInitialLoad) setIsRefreshing(true)
@@ -221,15 +238,33 @@ export default function RoadmapSummary() {
         <div className="flex items-center space-x-3">
           <Calendar className="w-5 h-5 text-purple-600" />
           <h3 className="text-lg font-semibold text-gray-900">Roadmap Intelligence</h3>
+          {lastUpdated && (
+            <div className="flex items-center space-x-1 text-xs text-gray-500">
+              <Clock className="w-3 h-3" />
+              <span>Updated {formatLastUpdate(lastUpdated)}</span>
+            </div>
+          )}
         </div>
         
-        <a 
-          href="#/analytics/roadmap"
-          className="text-sm text-blue-600 hover:text-blue-700 font-medium flex items-center space-x-1"
-        >
-          <span>View Full Roadmap</span>
-          <ChevronRight className="w-4 h-4" />
-        </a>
+        <div className="flex items-center space-x-2">
+          <button
+            onClick={handleManualRefresh}
+            disabled={isRefreshing}
+            className="flex items-center space-x-1 px-3 py-1.5 bg-purple-600 text-white text-xs font-medium rounded-md hover:bg-purple-700 disabled:opacity-50 transition-colors"
+            title="Update AI analysis (uses OpenAI API)"
+          >
+            <RefreshCw className={`w-3 h-3 ${isRefreshing ? 'animate-spin' : ''}`} />
+            <span>{isRefreshing ? 'Updating...' : 'Update BI'}</span>
+          </button>
+          
+          <a 
+            href="#/analytics/roadmap"
+            className="text-sm text-blue-600 hover:text-blue-700 font-medium flex items-center space-x-1"
+          >
+            <span>Full Roadmap</span>
+            <ChevronRight className="w-4 h-4" />
+          </a>
+        </div>
       </div>
 
       {/* Tab Navigation */}
