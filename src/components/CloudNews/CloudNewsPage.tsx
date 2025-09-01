@@ -60,7 +60,7 @@ export default function CloudNewsPage() {
     try {
       const [areasData, statsData] = await Promise.allSettled([
         cloudNewsService.getAvailableProductAreas(),
-        cloudNewsService.getCloudNewsStats(filters.days_back || 7)
+        cloudNewsService.getCloudNewsStats(filters.days_back || 60)
       ])
       
       setProductAreas(areasData.status === 'fulfilled' ? areasData.value : [])
@@ -117,8 +117,8 @@ export default function CloudNewsPage() {
 
     try {
       const [groupedData, statsData] = await Promise.allSettled([
-        cloudNewsService.getFeaturesByType(filters.days_back || 7),
-        cloudNewsService.getCloudNewsStats(filters.days_back || 7)
+        cloudNewsService.getFeaturesByType(filters.days_back || 60),
+        cloudNewsService.getCloudNewsStats(filters.days_back || 60)
       ])
 
       setGroupedNews(groupedData.status === 'fulfilled' ? groupedData.value : null)

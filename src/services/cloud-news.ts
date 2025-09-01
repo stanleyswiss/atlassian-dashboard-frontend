@@ -39,8 +39,8 @@ class CloudNewsService {
     return withRetry(() => api.get<CloudNews>(url))
   }
 
-  // Get cloud news statistics
-  async getCloudNewsStats(daysBack: number = 7): Promise<CloudNewsStats> {
+  // Get cloud news statistics (increased default to show more historical data)
+  async getCloudNewsStats(daysBack: number = 60): Promise<CloudNewsStats> {
     const url = `/api/cloud-news/stats/overview?days_back=${daysBack}`
     return withRetry(() => api.get<CloudNewsStats>(url))
   }
@@ -50,8 +50,8 @@ class CloudNewsService {
     return withRetry(() => api.get<ProductArea[]>('/api/cloud-news/products/list'))
   }
 
-  // Get features grouped by type (NEW_THIS_WEEK vs COMING_SOON)
-  async getFeaturesByType(daysBack: number = 7): Promise<CloudNewsGroupedByType> {
+  // Get features grouped by type (increased default to show more historical data)
+  async getFeaturesByType(daysBack: number = 60): Promise<CloudNewsGroupedByType> {
     const url = `/api/cloud-news/features/by-type?days_back=${daysBack}`
     return withRetry(() => api.get<CloudNewsGroupedByType>(url))
   }
