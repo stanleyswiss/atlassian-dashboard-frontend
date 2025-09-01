@@ -51,6 +51,14 @@ class PostsService {
     return withRetry(() => api.get<Post[]>(url))
   }
 
+  // Search posts with AI summaries (cached for performance)
+  async searchPostsWithSummaries(params: PostSearchParams): Promise<any[]> {
+    const queryString = createQueryString(params)
+    const url = `/api/posts/search/with-summaries?${queryString}`
+    
+    return withRetry(() => api.get<any[]>(url))
+  }
+
   // Get posts summary statistics
   async getPostsStatistics(): Promise<PostStatistics> {
     return withRetry(() => api.get<PostStatistics>('/api/posts/stats/summary'))

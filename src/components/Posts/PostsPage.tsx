@@ -53,8 +53,8 @@ export default function PostsPage() {
       }
 
       if (searchQuery.trim()) {
-        // Use search endpoint if there's a query
-        const searchResults = await postsService.searchPosts({
+        // Use AI-cached search endpoint if there's a query
+        const searchResults = await postsService.searchPostsWithSummaries({
           query: searchQuery,
           limit: POSTS_PER_PAGE,
           skip: filters.skip
