@@ -59,8 +59,8 @@ export default function TopAuthorsPage() {
     setError(null)
 
     try {
-      // Get all posts
-      const allPosts = await postsService.getPosts({ limit: 300 })
+      // Get all posts with AI summaries (cached for performance)
+      const allPosts = await postsService.getPostsWithSummaries({ limit: 300 })
       setPosts(allPosts)
 
       // Calculate author statistics

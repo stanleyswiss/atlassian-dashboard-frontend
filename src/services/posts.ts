@@ -74,24 +74,24 @@ class PostsService {
     return withRetry(() => api.get<SentimentLabel[]>('/api/posts/sentiments/'))
   }
 
-  // Get posts by specific category
+  // Get posts by specific category (using cached AI summaries)
   async getPostsByCategory(category: PostCategory, limit: number = 10): Promise<Post[]> {
-    return this.getPosts({ category, limit })
+    return this.getPostsWithSummaries({ category, limit })
   }
 
-  // Get posts by author
+  // Get posts by author (using cached AI summaries)
   async getPostsByAuthor(author: string, limit: number = 10): Promise<Post[]> {
-    return this.getPosts({ author, limit })
+    return this.getPostsWithSummaries({ author, limit })
   }
 
-  // Get posts by sentiment
+  // Get posts by sentiment (using cached AI summaries)
   async getPostsBySentiment(sentiment: SentimentLabel, limit: number = 10): Promise<Post[]> {
-    return this.getPosts({ sentiment, limit })
+    return this.getPostsWithSummaries({ sentiment, limit })
   }
 
-  // Get recent posts (last N posts)
+  // Get recent posts (last N posts, using cached AI summaries)
   async getRecentPosts(limit: number = 20): Promise<Post[]> {
-    return this.getPosts({ limit, skip: 0 })
+    return this.getPostsWithSummaries({ limit, skip: 0 })
   }
 
   // Get posts with AI-generated summaries instead of full content
@@ -129,7 +129,7 @@ class PostsService {
       limit: limit + 1 // Get one extra to check if there are more
     }
 
-    const posts = await this.getPosts(allFilters)
+    const posts = await this.getPostsWithSummaries(allFilters)
     const hasNext = posts.length > pageSize
     const actualPosts = hasNext ? posts.slice(0, pageSize) : posts
 
@@ -186,7 +186,7 @@ class PostsService {
     if (limit) filters.limit = limit
     if (skip) filters.skip = skip
 
-    let posts = await this.getPosts(filters)
+    let posts = await this.getPostsWithSummaries(filters)
 
     // Apply client-side filtering for multiple values (not ideal, but works for MVP)
     if (categories && categories.length > 1) {
@@ -274,7 +274,7 @@ class PostsService {
 
   // Export posts data
   async exportPosts(filters: PostFilters = {}, format: 'json' | 'csv' = 'json'): Promise<string> {
-    const posts = await this.getPosts(filters)
+    const posts = await this.getPostsWithSummaries(filters)
     
     if (format === 'json') {
       return JSON.stringify(posts, null, 2)
