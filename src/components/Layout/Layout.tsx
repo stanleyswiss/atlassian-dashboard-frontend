@@ -122,7 +122,9 @@ function getPageDescription(page: string): string {
     forums: 'Activity breakdown by Atlassian product forums',
     authors: 'Most active community contributors and their engagement',
     schedule: 'Data collection schedule and automation settings',
-    settings: 'Configure dashboard preferences and data collection'
+    settings: 'Configure dashboard preferences and data collection',
+    'release-notes': 'Track Atlassian product and marketplace app releases',
+    'cloud-news': 'Latest Atlassian Cloud feature updates and announcements'
   }
   
   return descriptions[page] || 'Manage your Atlassian Community Dashboard'

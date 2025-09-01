@@ -9,7 +9,9 @@ import {
   Settings,
   Home,
   ChevronLeft,
-  ChevronRight
+  ChevronRight,
+  Package,
+  Cloud
 } from 'lucide-react'
 
 interface SidebarProps {
@@ -61,6 +63,18 @@ const navigationItems: NavItem[] = [
     id: 'schedule',
     label: 'Product Roadmap',
     icon: Calendar,
+  },
+  {
+    id: 'release-notes',
+    label: 'Release Notes',
+    icon: Package,
+    badge: 'New'
+  },
+  {
+    id: 'cloud-news',
+    label: 'Cloud News',
+    icon: Cloud,
+    badge: 'New'
   }
 ]
 

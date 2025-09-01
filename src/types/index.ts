@@ -3,6 +3,8 @@ export * from './post'
 export * from './analytics'
 export * from './dashboard'
 export * from './api'
+export * from './release-notes'
+export * from './cloud-news'
 
 // Common utility types
 export type Status = 'idle' | 'loading' | 'success' | 'error'

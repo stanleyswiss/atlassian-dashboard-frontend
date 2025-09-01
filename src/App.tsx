@@ -8,6 +8,8 @@ import ForumsPage from '@/components/Forums/ForumsPage'
 import TopAuthorsPage from '@/components/Authors/TopAuthorsPage'
 import SchedulePage from '@/components/Schedule/SchedulePage'
 import SettingsPage from '@/components/Settings/SettingsPage'
+import ReleaseNotesPage from '@/components/ReleaseNotes/ReleaseNotesPage'
+import CloudNewsPage from '@/components/CloudNews/CloudNewsPage'
 
 function App() {
   const [currentPage, setCurrentPage] = useState('dashboard')
@@ -34,6 +36,10 @@ function App() {
         return <SchedulePage />
       case 'settings':
         return <SettingsPage />
+      case 'release-notes':
+        return <ReleaseNotesPage />
+      case 'cloud-news':
+        return <CloudNewsPage />
       default:
         return <NotFound />
     }

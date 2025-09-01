@@ -7,16 +7,22 @@ export * from './api'
 import dashboardServiceInstance from './dashboard'
 import postsServiceInstance from './posts'
 import analyticsServiceInstance from './analytics'
+import releaseNotesServiceInstance from './release-notes'
+import cloudNewsServiceInstance from './cloud-news'
 
 export { dashboardService, default as defaultDashboardService } from './dashboard'
 export { postsService, default as defaultPostsService } from './posts'
 export { analyticsService, default as defaultAnalyticsService } from './analytics'
 export { forumsService } from './forums'
+export { releaseNotesService, default as defaultReleaseNotesService } from './release-notes'
+export { cloudNewsService, default as defaultCloudNewsService } from './cloud-news'
 
 // Individual service exports with utilities
 export * from './dashboard'
 export * from './posts'
 export * from './analytics'
+export * from './release-notes'
+export * from './cloud-news'
 
 // Re-export commonly used functions
 export {
@@ -32,7 +38,9 @@ export {
 export const services = {
   dashboard: dashboardServiceInstance,
   posts: postsServiceInstance,
-  analytics: analyticsServiceInstance
+  analytics: analyticsServiceInstance,
+  releaseNotes: releaseNotesServiceInstance,
+  cloudNews: cloudNewsServiceInstance
 } as const
 
 // API endpoints configuration (matches backend)
@@ -74,6 +82,30 @@ export const API_ENDPOINTS = {
     forumComparison: '/api/analytics/forum-comparison',
     summary: '/api/analytics/summary',
     generateDaily: '/api/analytics/generate-daily/:date'
+  },
+  
+  // Release Notes endpoints
+  releaseNotes: {
+    list: '/api/release-notes/',
+    summary: '/api/release-notes/summary',
+    getById: '/api/release-notes/:id',
+    stats: '/api/release-notes/stats/overview',
+    products: '/api/release-notes/products/list',
+    scrape: '/api/release-notes/scrape',
+    analyze: '/api/release-notes/:id/analyze'
+  },
+  
+  // Cloud News endpoints
+  cloudNews: {
+    list: '/api/cloud-news/',
+    summary: '/api/cloud-news/summary',
+    getById: '/api/cloud-news/:id',
+    stats: '/api/cloud-news/stats/overview',
+    productAreas: '/api/cloud-news/products/list',
+    featuresByType: '/api/cloud-news/features/by-type',
+    search: '/api/cloud-news/search/by-content',
+    scrape: '/api/cloud-news/scrape',
+    analyze: '/api/cloud-news/:id/analyze'
   }
 } as const
 
@@ -85,12 +117,16 @@ export const checkServiceHealth = async (): Promise<{
     dashboard: boolean
     posts: boolean
     analytics: boolean
+    releaseNotes: boolean
+    cloudNews: boolean
   }
   response_times: {
     api: number
     dashboard?: number
     posts?: number
     analytics?: number
+    releaseNotes?: number
+    cloudNews?: number
   }
 }> => {
   const results: {
@@ -100,12 +136,16 @@ export const checkServiceHealth = async (): Promise<{
       dashboard: boolean
       posts: boolean
       analytics: boolean
+      releaseNotes: boolean
+      cloudNews: boolean
     }
     response_times: {
       api: number
       dashboard?: number
       posts?: number
       analytics?: number
+      releaseNotes?: number
+      cloudNews?: number
     }
   } = {
     status: 'healthy',
@@ -113,7 +153,9 @@ export const checkServiceHealth = async (): Promise<{
       api: false,
       dashboard: false,
       posts: false,
-      analytics: false
+      analytics: false,
+      releaseNotes: false,
+      cloudNews: false
     },
     response_times: {
       api: 0
@@ -156,6 +198,26 @@ export const checkServiceHealth = async (): Promise<{
       results.response_times.analytics = Date.now() - analyticsStart
     } catch (error) {
       console.warn('Analytics service check failed:', error)
+    }
+
+    // Test release notes service
+    try {
+      const releaseNotesStart = Date.now()
+      await releaseNotesServiceInstance.getAvailableProducts()
+      results.services.releaseNotes = true
+      results.response_times.releaseNotes = Date.now() - releaseNotesStart
+    } catch (error) {
+      console.warn('Release notes service check failed:', error)
+    }
+
+    // Test cloud news service
+    try {
+      const cloudNewsStart = Date.now()
+      await cloudNewsServiceInstance.getAvailableProductAreas()
+      results.services.cloudNews = true
+      results.response_times.cloudNews = Date.now() - cloudNewsStart
+    } catch (error) {
+      console.warn('Cloud news service check failed:', error)
     }
 
     // Determine overall status
@@ -229,6 +291,8 @@ export const devUtils = {
     cache.clear()
     dashboardServiceInstance.clearCache()
     analyticsServiceInstance.clearCache()
+    releaseNotesServiceInstance.clearCache()
+    cloudNewsServiceInstance.clearCache()
     console.log('🗑️ All service caches cleared')
   },
   
