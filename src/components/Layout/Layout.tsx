@@ -35,16 +35,17 @@ export default function Layout({ children, currentPage, onNavigate }: LayoutProp
     }
   }
 
-  // Auto-refresh every 15 minutes (lightweight only)
-  useEffect(() => {
-    const interval = setInterval(() => {
-      if (!isRefreshing) {
-        handleRefresh(false) // Always use lightweight for auto-refresh
-      }
-    }, 15 * 60 * 1000) // 15 minutes
+  // REMOVED: Auto-refresh disabled to prevent unwanted scraper triggers
+  // Auto-refresh should only happen via manual user action or scheduled background jobs
+  // useEffect(() => {
+  //   const interval = setInterval(() => {
+  //     if (!isRefreshing) {
+  //       handleRefresh(false) // Always use lightweight for auto-refresh
+  //     }
+  //   }, 15 * 60 * 1000) // 15 minutes
 
-    return () => clearInterval(interval)
-  }, [isRefreshing])
+  //   return () => clearInterval(interval)
+  // }, [isRefreshing])
 
   return (
     <div className="min-h-screen bg-gray-50 flex flex-col">
