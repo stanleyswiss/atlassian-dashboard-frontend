@@ -576,38 +576,90 @@ function ListNewsView({
 
 // Compact Feature Card (for grouped view)
 function CompactFeatureCard({ feature, featureType }: { 
-  feature: { id: number; feature_title: string; product_area?: string; blog_date: string; ai_summary?: string }
+  feature: CloudNews
   featureType: FeatureType
 }) {
+  const [isExpanded, setIsExpanded] = useState(false)
   const { displayName, color } = cloudNewsService.getFeatureTypeInfo(featureType)
 
   return (
-    <div className="border border-gray-200 rounded-lg p-4 hover:bg-gray-50 transition-colors">
-      <div className="flex items-start justify-between">
-        <div className="flex-1 min-w-0">
-          <div className="flex items-center space-x-2 mb-2">
-            <h3 className="font-medium text-gray-900 line-clamp-1">
-              {feature.feature_title}
-            </h3>
-            {feature.product_area && (
-              <span className={`inline-flex items-center px-2 py-1 rounded-full text-xs font-medium ${cloudNewsService.getProductAreaColor(feature.product_area)}`}>
-                {feature.product_area}
-              </span>
+    <div className="border border-gray-200 rounded-lg transition-colors">
+      {/* Header - Always visible and clickable */}
+      <div 
+        className="p-4 cursor-pointer hover:bg-gray-50 transition-colors"
+        onClick={() => setIsExpanded(!isExpanded)}
+      >
+        <div className="flex items-start justify-between">
+          <div className="flex-1 min-w-0">
+            <div className="flex items-center space-x-2 mb-2">
+              <h3 className="font-medium text-gray-900 line-clamp-1">
+                {feature.feature_title}
+              </h3>
+              {feature.product_area && (
+                <span className={`inline-flex items-center px-2 py-1 rounded-full text-xs font-medium ${cloudNewsService.getProductAreaColor(feature.product_area)}`}>
+                  {feature.product_area}
+                </span>
+              )}
+            </div>
+            
+            {feature.ai_summary && (
+              <p className="text-sm text-gray-600 line-clamp-2 mb-2">
+                {feature.ai_summary}
+              </p>
             )}
+            
+            <div className="flex items-center text-xs text-gray-500">
+              <Clock className="h-3 w-3 mr-1" />
+              <span>{cloudNewsService.formatBlogDate(feature.blog_date)}</span>
+            </div>
           </div>
           
-          {feature.ai_summary && (
-            <p className="text-sm text-gray-600 line-clamp-2 mb-2">
-              {feature.ai_summary}
-            </p>
-          )}
-          
-          <div className="flex items-center text-xs text-gray-500">
-            <Clock className="h-3 w-3 mr-1" />
-            <span>{cloudNewsService.formatBlogDate(feature.blog_date)}</span>
+          {/* Expand/Collapse indicator */}
+          <div className="ml-4">
+            {isExpanded ? (
+              <ChevronUp className="h-4 w-4 text-gray-500" />
+            ) : (
+              <ChevronDown className="h-4 w-4 text-gray-500" />
+            )}
           </div>
         </div>
       </div>
+
+      {/* Expanded content - Full feature details */}
+      {isExpanded && feature.feature_content && (
+        <div className="px-4 pb-4 border-t border-gray-100">
+          <div className="mt-4">
+            <div 
+              className="prose prose-sm max-w-none text-gray-700"
+              dangerouslySetInnerHTML={{ __html: feature.feature_content }}
+            />
+            
+            {/* Additional metadata when expanded */}
+            <div className="mt-4 pt-4 border-t border-gray-100 flex items-center justify-between text-xs text-gray-500">
+              <div className="flex items-center space-x-4">
+                <span className="flex items-center">
+                  <ExternalLink className="h-3 w-3 mr-1" />
+                  <a 
+                    href={feature.source_url} 
+                    target="_blank" 
+                    rel="noopener noreferrer"
+                    className="hover:text-blue-600 transition-colors"
+                  >
+                    View original post
+                  </a>
+                </span>
+                {feature.blog_title && (
+                  <span>{feature.blog_title}</span>
+                )}
+              </div>
+              
+              <span className={`inline-flex items-center px-2 py-1 rounded-full text-xs font-medium ${color}`}>
+                {displayName}
+              </span>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   )
 }

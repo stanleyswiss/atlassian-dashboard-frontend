@@ -61,21 +61,9 @@ export interface ProductArea {
 }
 
 export interface CloudNewsGroupedByType {
-  new_this_week: Array<{
-    id: number
-    feature_title: string
-    product_area?: string
-    blog_date: string
-    ai_summary?: string
-  }>
-  coming_soon: Array<{
-    id: number
-    feature_title: string
-    product_area?: string
-    blog_date: string
-    ai_summary?: string
-  }>
-  days_back: number
+  new_this_week: CloudNews[]
+  coming_soon: CloudNews[]
+  days_back?: number
 }
 
 // UI-specific types
