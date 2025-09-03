@@ -10,7 +10,9 @@ import {
   Users,
   Hash,
   Zap,
-  ArrowRight
+  ArrowRight,
+  ChevronDown,
+  ChevronUp
 } from 'lucide-react'
 import { 
   CloudNews, 
@@ -40,6 +42,13 @@ export default function CloudNewsPage() {
     days_back: 30,
     limit: 20,
     skip: 0
+  })
+  const [expandedSections, setExpandedSections] = useState<{
+    newThisWeek: boolean
+    comingSoon: boolean
+  }>({
+    newThisWeek: false, // Start collapsed
+    comingSoon: false   // Start collapsed
   })
 
   const NEWS_PER_PAGE = 20
@@ -116,12 +125,32 @@ export default function CloudNewsPage() {
     setError(null)
 
     try {
-      const [groupedData, statsData] = await Promise.allSettled([
-        cloudNewsService.getFeaturesByType(filters.days_back || 90),
-        cloudNewsService.getCloudNewsStats(filters.days_back || 90)
+      // Apply filters to grouped news data
+      const [newThisWeekData, comingSoonData, statsData] = await Promise.allSettled([
+        cloudNewsService.getCloudNews({
+          feature_type: FeatureType.NEW_THIS_WEEK,
+          days_back: filters.days_back || 30,
+          product_area: filters.product_area,
+          target_audience: filters.target_audience,
+          limit: 100
+        }),
+        cloudNewsService.getCloudNews({
+          feature_type: FeatureType.COMING_SOON,
+          days_back: filters.days_back || 30,
+          product_area: filters.product_area,
+          target_audience: filters.target_audience,
+          limit: 100
+        }),
+        cloudNewsService.getCloudNewsStats(filters.days_back || 30)
       ])
 
-      setGroupedNews(groupedData.status === 'fulfilled' ? groupedData.value : null)
+      const newThisWeek = newThisWeekData.status === 'fulfilled' ? newThisWeekData.value : []
+      const comingSoon = comingSoonData.status === 'fulfilled' ? comingSoonData.value : []
+
+      setGroupedNews({
+        new_this_week: newThisWeek,
+        coming_soon: comingSoon
+      })
       setStats(statsData.status === 'fulfilled' ? statsData.value : null)
 
     } catch (err: any) {
@@ -153,6 +182,13 @@ export default function CloudNewsPage() {
   const handleFiltersChange = (newFilters: Partial<CloudNewsFilters>) => {
     setFilters(prev => ({ ...prev, ...newFilters }))
     setCurrentPage(1) // Reset to first page when filters change
+  }
+
+  const toggleSection = (section: 'newThisWeek' | 'comingSoon') => {
+    setExpandedSections(prev => ({
+      ...prev,
+      [section]: !prev[section]
+    }))
   }
 
   const handleSearch = (e: React.FormEvent) => {
@@ -366,7 +402,11 @@ export default function CloudNewsPage() {
 
       {/* Content */}
       {viewMode === 'grouped' ? (
-        <GroupedNewsView groupedNews={groupedNews} />
+        <GroupedNewsView 
+          groupedNews={groupedNews} 
+          expandedSections={expandedSections}
+          toggleSection={toggleSection}
+        />
       ) : (
         <ListNewsView 
           newsItems={newsItems}
@@ -380,7 +420,15 @@ export default function CloudNewsPage() {
 }
 
 // Grouped News View Component
-function GroupedNewsView({ groupedNews }: { groupedNews: CloudNewsGroupedByType | null }) {
+function GroupedNewsView({ 
+  groupedNews, 
+  expandedSections, 
+  toggleSection 
+}: { 
+  groupedNews: CloudNewsGroupedByType | null
+  expandedSections: { newThisWeek: boolean; comingSoon: boolean }
+  toggleSection: (section: 'newThisWeek' | 'comingSoon') => void
+}) {
   if (!groupedNews) {
     return (
       <div className="dashboard-card">
@@ -397,7 +445,10 @@ function GroupedNewsView({ groupedNews }: { groupedNews: CloudNewsGroupedByType 
     <div className="space-y-6">
       {/* New This Week */}
       <div className="dashboard-card">
-        <div className="flex items-center justify-between mb-6">
+        <div 
+          className="flex items-center justify-between mb-6 cursor-pointer hover:bg-gray-50 -m-4 p-4 rounded-lg transition-colors"
+          onClick={() => toggleSection('newThisWeek')}
+        >
           <div className="flex items-center space-x-2">
             <Zap className="h-5 w-5 text-green-500" />
             <h2 className="text-lg font-semibold text-gray-900">New This Week</h2>
@@ -405,24 +456,34 @@ function GroupedNewsView({ groupedNews }: { groupedNews: CloudNewsGroupedByType 
               {groupedNews.new_this_week.length} features
             </span>
           </div>
-        </div>
-
-        <div className="space-y-4">
-          {groupedNews.new_this_week.length === 0 ? (
-            <div className="text-center py-8 text-gray-500">
-              <p>No new features this week</p>
-            </div>
+          {expandedSections.newThisWeek ? (
+            <ChevronUp className="h-5 w-5 text-gray-500" />
           ) : (
-            groupedNews.new_this_week.map((feature) => (
-              <CompactFeatureCard key={feature.id} feature={feature} featureType={FeatureType.NEW_THIS_WEEK} />
-            ))
+            <ChevronDown className="h-5 w-5 text-gray-500" />
           )}
         </div>
+
+        {expandedSections.newThisWeek && (
+          <div className="space-y-4">
+            {groupedNews.new_this_week.length === 0 ? (
+              <div className="text-center py-8 text-gray-500">
+                <p>No new features this week</p>
+              </div>
+            ) : (
+              groupedNews.new_this_week.map((feature) => (
+                <CompactFeatureCard key={feature.id} feature={feature} featureType={FeatureType.NEW_THIS_WEEK} />
+              ))
+            )}
+          </div>
+        )}
       </div>
 
       {/* Coming Soon */}
       <div className="dashboard-card">
-        <div className="flex items-center justify-between mb-6">
+        <div 
+          className="flex items-center justify-between mb-6 cursor-pointer hover:bg-gray-50 -m-4 p-4 rounded-lg transition-colors"
+          onClick={() => toggleSection('comingSoon')}
+        >
           <div className="flex items-center space-x-2">
             <ArrowRight className="h-5 w-5 text-purple-500" />
             <h2 className="text-lg font-semibold text-gray-900">Coming Soon</h2>
@@ -430,19 +491,26 @@ function GroupedNewsView({ groupedNews }: { groupedNews: CloudNewsGroupedByType 
               {groupedNews.coming_soon.length} features
             </span>
           </div>
-        </div>
-
-        <div className="space-y-4">
-          {groupedNews.coming_soon.length === 0 ? (
-            <div className="text-center py-8 text-gray-500">
-              <p>No upcoming features announced</p>
-            </div>
+          {expandedSections.comingSoon ? (
+            <ChevronUp className="h-5 w-5 text-gray-500" />
           ) : (
-            groupedNews.coming_soon.map((feature) => (
-              <CompactFeatureCard key={feature.id} feature={feature} featureType={FeatureType.COMING_SOON} />
-            ))
+            <ChevronDown className="h-5 w-5 text-gray-500" />
           )}
         </div>
+
+        {expandedSections.comingSoon && (
+          <div className="space-y-4">
+            {groupedNews.coming_soon.length === 0 ? (
+              <div className="text-center py-8 text-gray-500">
+                <p>No upcoming features announced</p>
+              </div>
+            ) : (
+              groupedNews.coming_soon.map((feature) => (
+                <CompactFeatureCard key={feature.id} feature={feature} featureType={FeatureType.COMING_SOON} />
+              ))
+            )}
+          </div>
+        )}
       </div>
     </div>
   )
