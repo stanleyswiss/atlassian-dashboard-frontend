@@ -82,7 +82,7 @@ class CloudNewsService {
     const filters: CloudNewsFilters = { 
       limit, 
       skip: 0, 
-      days_back: 14, // Look back 2 weeks for "recent"
+      days_back: 30, // Look back 30 days for "recent"
       feature_type: featureType 
     }
     return this.getCloudNews(filters)
@@ -94,7 +94,7 @@ class CloudNewsService {
       limit, 
       skip: 0, 
       feature_type: FeatureType.NEW_THIS_WEEK,
-      days_back: 7
+      days_back: 30 // Increased to capture recent weeks
     }
     return this.getCloudNews(filters)
   }
@@ -105,7 +105,7 @@ class CloudNewsService {
       limit, 
       skip: 0, 
       feature_type: FeatureType.COMING_SOON,
-      days_back: 14
+      days_back: 30 // Increased to capture recent weeks
     }
     return this.getCloudNews(filters)
   }
@@ -269,7 +269,7 @@ class CloudNewsService {
   }
 
   // Get cloud news dashboard data
-  async getDashboardData(daysBack: number = 7): Promise<{
+  async getDashboardData(daysBack: number = 30): Promise<{
     stats: CloudNewsStats
     newThisWeek: CloudNewsSummary[]
     comingSoon: CloudNewsSummary[]

@@ -37,7 +37,7 @@ export default function CloudNewsPage() {
   const [viewMode, setViewMode] = useState<'list' | 'grouped'>('grouped')
   const [searchQuery, setSearchQuery] = useState('')
   const [filters, setFilters] = useState<CloudNewsFilters>({
-    days_back: 7,
+    days_back: 30,
     limit: 20,
     skip: 0
   })
